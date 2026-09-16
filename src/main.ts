@@ -1,7 +1,15 @@
 import { createApp } from 'vue'
 
 import App from './App.vue'
-import router from './router'
-import './styles/global.css'
+import './styles/source.css'
 
-createApp(App).use(router).mount('#app')
+const colorScheme = window.matchMedia('(prefers-color-scheme: dark)')
+
+function syncTheme(event?: MediaQueryListEvent) {
+  document.body.toggleAttribute('data-ds-dark-theme', event?.matches ?? colorScheme.matches)
+}
+
+syncTheme()
+colorScheme.addEventListener('change', syncTheme)
+
+createApp(App).mount('#app')
