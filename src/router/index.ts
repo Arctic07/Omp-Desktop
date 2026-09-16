@@ -1,34 +1,45 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 
 import HomePage from '../pages/HomePage.vue'
-import PlaceholderPage from '../pages/PlaceholderPage.vue'
+import ProjectsPage from '../pages/ProjectsPage.vue'
+import PullRequestsPage from '../pages/PullRequestsPage.vue'
+import ScheduledPage from '../pages/ScheduledPage.vue'
+import SettingsPage from '../pages/SettingsPage.vue'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
     component: HomePage,
-    meta: { title: '工作台' },
+    meta: { title: '工作台', page: 'chat' },
   },
   {
-    path: '/sessions',
-    name: 'sessions',
-    component: PlaceholderPage,
-    props: {
-      title: '会话',
-      description: '会话能力将在后续版本接入。',
-    },
-    meta: { title: '会话' },
+    path: '/projects',
+    name: 'projects',
+    component: ProjectsPage,
+    meta: { title: '项目', page: 'projects' },
+  },
+  {
+    path: '/pulls',
+    name: 'pulls',
+    component: PullRequestsPage,
+    meta: { title: '拉取请求', page: 'pulls' },
+  },
+  {
+    path: '/scheduled',
+    name: 'scheduled',
+    component: ScheduledPage,
+    meta: { title: '计划任务', page: 'scheduled' },
   },
   {
     path: '/settings',
     name: 'settings',
-    component: PlaceholderPage,
-    props: {
-      title: '设置',
-      description: '应用设置将在后续版本接入。',
-    },
-    meta: { title: '设置' },
+    component: SettingsPage,
+    meta: { title: '设置', page: 'settings' },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/',
   },
 ]
 

@@ -1,0 +1,403 @@
+/* Composer dock, contenteditable input, and source-aligned toolbar controls. */
+
+.composer-dock {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  pointer-events: none;
+  container-type: inline-size;
+  container-name: composer-stack;
+}
+
+.composer-dock-docked {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 4;
+  padding: 0 24px 16px;
+  background: transparent;
+}
+
+.composer-dock-home {
+  position: relative;
+  padding: 0;
+  background: transparent;
+}
+
+.composer-stack {
+  display: flex;
+  width: min(100%, var(--chat-composer-max-width, 768px));
+  max-width: 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  pointer-events: auto;
+  transition: width var(--motion-duration-normal) var(--motion-ease-out);
+}
+
+.composer-shell {
+  position: relative;
+  width: 100%;
+  border-radius: var(--ds-composer-radius, var(--radius-2xl));
+  background: var(--ds-bg-composer);
+  box-shadow: var(--ds-shadow-composer);
+  isolation: isolate;
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-out),
+    box-shadow var(--motion-duration-normal) var(--motion-ease-out),
+    transform var(--motion-duration-normal) var(--motion-ease-out);
+}
+
+.composer-shell:focus-within {
+  box-shadow: 0 7px 24px color-mix(in oklab, var(--ds-text-primary) 9%, transparent);
+}
+
+.composer-shell.is-disabled {
+  cursor: not-allowed;
+}
+
+.composer-shell.is-drop-target {
+  outline: 2px solid color-mix(in oklab, var(--ds-accent) 72%, transparent);
+  outline-offset: 3px;
+}
+
+.composer-input-wrap {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 10px 12px 0;
+}
+
+.composer-input-stage {
+  position: relative;
+  width: 100%;
+}
+
+.composer-input {
+  width: 100%;
+  min-height: 3lh;
+  max-height: 7lh;
+  overflow-y: hidden;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ds-text-primary);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.composer-input[contenteditable="false"] {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.composer-placeholder {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  padding-top: 2px;
+  color: var(--ds-text-secondary);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  opacity: 0.72;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  user-select: none;
+  white-space: nowrap;
+  animation: composer-placeholder-fade-in var(--motion-duration-fast) var(--motion-ease-out) both;
+}
+
+@keyframes composer-placeholder-fade-in {
+  from { opacity: 0; }
+  to { opacity: 0.72; }
+}
+
+.composer-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: nowrap;
+  padding: 4px 8px 8px;
+}
+
+.composer-left,
+.composer-right {
+  display: flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.composer-right {
+  justify-content: flex-end;
+}
+
+.icon-btn,
+.send-btn,
+.stop-btn {
+  display: inline-flex;
+  min-width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-full);
+  padding: 0 8px;
+  color: var(--ds-text-secondary);
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-out),
+    color var(--motion-duration-fast) var(--motion-ease-out),
+    opacity var(--motion-duration-fast) var(--motion-ease-out),
+    transform var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.icon-btn:hover:not(:disabled),
+.stop-btn:hover:not(:disabled) {
+  background: var(--ds-bg-hover);
+  color: var(--ds-text-primary);
+}
+
+.icon-btn.active {
+  background: var(--ds-bg-active);
+  color: var(--ds-text-primary);
+}
+
+.icon-btn:disabled,
+.send-btn:disabled,
+.stop-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.composer-plus {
+  display: inline-flex;
+  flex: 0 0 28px;
+}
+
+.composer-plus-button {
+  width: 28px;
+  padding: 0;
+}
+
+.mode-chip {
+  max-width: min(34vw, 180px);
+  white-space: nowrap;
+}
+
+.composer-mode-chip-face,
+.composer-mode-chip,
+.composer-permission-trigger,
+.context-inspector-trigger,
+.composer-model-chip {
+  display: inline-flex;
+  align-items: center;
+}
+
+.composer-mode-chip-face {
+  min-width: 0;
+  gap: 6px;
+}
+
+.composer-mode-chip-label,
+.composer-permission-trigger > span,
+.context-inspector-trigger > span,
+.composer-model-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-inspector,
+.composer-model-thinking,
+.composer-permission {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.composer-right .context-inspector-trigger {
+  min-height: 28px;
+}
+
+.composer-model-thinking-chip {
+  max-width: min(24vw, 160px);
+}
+
+.composer-model-thinking-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.composer-model-thinking-model {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-mode-chip[data-planning="true"] {
+  color: var(--ds-text-primary);
+}
+
+.context-inspector-trigger,
+.composer-model-chip {
+  max-width: min(24vw, 160px);
+}
+
+.composer-enhance-btn {
+  width: 28px;
+  padding: 0;
+}
+
+.send-btn {
+  width: 28px;
+  background: var(--gray-0);
+  color: var(--gray-1000);
+}
+
+:root[data-theme="light"] .send-btn {
+  background: var(--gray-1000);
+  color: var(--gray-0);
+}
+
+.send-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.send-btn:disabled {
+  background: var(--ds-send-disabled-bg);
+  color: var(--ds-send-disabled-fg);
+  opacity: 1;
+}
+
+.stop-btn {
+  width: 28px;
+  background: color-mix(in oklab, var(--ds-text-primary) 16%, transparent);
+  color: var(--ds-text-primary);
+}
+
+.stop-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--ds-text-primary) 22%, transparent);
+}
+
+.send-btn:active:not(:disabled),
+.stop-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.composer-menu {
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  z-index: 20;
+  display: flex;
+  min-width: 180px;
+  max-width: min(320px, calc(100vw - 24px));
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--ds-border-default);
+  border-radius: var(--radius-lg);
+  background: var(--ds-bg-elevated-opaque);
+  box-shadow: var(--ds-shadow-dialog);
+}
+
+.composer-menu-mode,
+.composer-menu-permission {
+  right: auto;
+  left: 8px;
+}
+
+.composer-menu-title {
+  padding: 5px 8px 4px;
+  color: var(--ds-text-muted);
+  font-size: var(--text-xs-plus);
+  font-weight: var(--font-weight-medium);
+}
+
+.composer-menu-option {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  color: var(--ds-text-secondary);
+  font-size: var(--text-sm-plus);
+  text-align: left;
+}
+
+.composer-menu-option:hover,
+.composer-menu-option.active {
+  background: var(--ds-bg-hover);
+  color: var(--ds-text-primary);
+}
+
+.composer-menu-option-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.composer-menu-option-copy strong {
+  color: inherit;
+  font-size: inherit;
+  font-weight: var(--font-weight-medium);
+}
+
+.composer-menu-option-copy small {
+  color: var(--ds-text-muted);
+  font-size: var(--text-xs);
+}
+
+.composer-attachment-note {
+  margin: 0 12px 10px;
+  border-radius: var(--radius-md);
+  padding: 7px 9px;
+  background: var(--ds-tile);
+  color: var(--ds-text-secondary);
+  font-size: var(--text-xs-plus);
+  line-height: var(--leading-compact);
+}
+
+.composer-status {
+  margin: 8px 0 0;
+  color: var(--ds-text-muted);
+  font-size: var(--text-xs-plus);
+  text-align: center;
+}
+
+.composer-status-error {
+  color: var(--ds-error);
+}
+
+@container composer-stack (max-width: 520px) {
+  .composer-dock-docked { padding-inline: 12px; }
+  .composer-toolbar { padding-inline: 6px; }
+  .composer-input-wrap { padding-inline: 10px; }
+  .context-inspector-trigger > span,
+  .composer-model-chip > span { display: none; }
+}
+
+@container composer-stack (max-width: 360px) {
+  .composer-permission-trigger > span { display: none; }
+  .mode-chip { max-width: 42px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer-placeholder { animation: none; }
+}

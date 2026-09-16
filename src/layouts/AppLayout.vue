@@ -1,133 +1,81 @@
 <script setup lang="ts">
-import { computed, ref, watch, type Component } from 'vue'
+import { computed, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import {
-  Avatar,
-  Breadcrumb,
-  BreadcrumbItem,
-  Button,
-  Layout as ALayout,
-  LayoutContent,
-  LayoutHeader,
-  LayoutSider,
-  Menu,
-  MenuItem,
-} from '@arco-design/web-vue'
-import {
-  IconDashboard,
-  IconMenuFold,
-  IconMenuUnfold,
-  IconMessage,
-  IconSettings,
-  IconUser,
-} from '@arco-design/web-vue/es/icon'
 
-import { useAppStore, type AppMenuKey } from '../stores/app'
-
-type MenuItemConfig = {
-  key: AppMenuKey
-  label: string
-  icon: Component
-}
-
-const menuItems: MenuItemConfig[] = [
-  { key: '/', label: '工作台', icon: IconDashboard },
-  { key: '/sessions', label: '会话', icon: IconMessage },
-  { key: '/settings', label: '设置', icon: IconSettings },
-]
-
-const isMenuKey = (value: string): value is AppMenuKey =>
-  menuItems.some((item) => item.key === value)
+import ConversationTopbar from '../components/ConversationTopbar.vue'
+import Sidebar from '../components/Sidebar.vue'
+import WorkPanel from '../components/WorkPanel.vue'
+import { useAppStore } from '../stores/app'
 
 const route = useRoute()
 const router = useRouter()
-const { activeMenu, appTitle } = useAppStore()
-const collapsed = ref(false)
+const {
+  sidebarCollapsed,
+  workPanelOpen,
+  settings,
+  setWorkPanelOpen,
+  toggleSidebar,
+  createSession,
+} = useAppStore()
 
-const currentRoutePath = computed<AppMenuKey>(() =>
-  isMenuKey(route.path) ? route.path : '/',
-)
-const currentTitle = computed(
-  () =>
-    menuItems.find((item) => item.key === currentRoutePath.value)?.label ??
-    '工作台',
+const isSettingsPage = computed(() => route.name === 'settings')
+const effectiveTheme = computed(() =>
+  settings.value.theme === 'system' ? 'dark' : settings.value.theme,
 )
 
 watch(
-  currentRoutePath,
-  (path) => {
-    activeMenu.value = path
+  () => settings.value.fontSize,
+  (fontSize) => {
+    document.documentElement.dataset.fontSize = fontSize
   },
   { immediate: true },
 )
 
-function handleMenuClick(key: string) {
-  if (isMenuKey(key) && key !== route.path) {
-    void router.push(key)
-  }
+function handleNewTask() {
+  createSession()
+  void router.push({ name: 'home' })
 }
 
-function handleCollapse(value: boolean) {
-  collapsed.value = value
+function handleSearch() {
+  document.querySelector<HTMLElement>('.composer-input')?.focus()
+}
+
+function handleToggleSidebar() {
+  toggleSidebar()
+}
+
+function handleToggleWorkPanel() {
+  setWorkPanelOpen(!workPanelOpen.value)
 }
 </script>
 
 <template>
-  <ALayout class="app-layout">
-    <LayoutSider
-      class="app-sider"
-      :collapsed="collapsed"
-      collapsible
-      @collapse="handleCollapse"
-    >
-      <div class="brand-area">
-        <div class="brand-mark" aria-hidden="true">O</div>
-        <span v-if="!collapsed" class="brand-name">{{ appTitle }}</span>
-      </div>
-
-      <Menu
-        class="app-menu"
-        :selected-keys="[activeMenu]"
-        @menu-item-click="handleMenuClick"
+  <div
+    class="app-shell"
+    :class="{ 'sidebar-collapsed': sidebarCollapsed, 'settings-mode': isSettingsPage }"
+    :data-theme="effectiveTheme"
+    data-platform="win32"
+  >
+    <Sidebar v-if="!isSettingsPage && !sidebarCollapsed" />
+    <main class="main-pane">
+      <ConversationTopbar
+        v-if="route.name === 'home'"
+        @toggle-sidebar="handleToggleSidebar"
+        @new-task="handleNewTask"
+        @search="handleSearch"
+        @toggle-work-panel="handleToggleWorkPanel"
+      />
+      <div v-else-if="!isSettingsPage" class="main-titlebar" aria-hidden="true" />
+      <div
+        class="router-view-shell"
+        :class="{
+          'settings-view-shell': isSettingsPage,
+          'route-page-shell': !isSettingsPage && route.name !== 'home',
+        }"
       >
-        <MenuItem v-for="item in menuItems" :key="item.key">
-          <template #icon>
-            <component :is="item.icon" />
-          </template>
-          {{ item.label }}
-        </MenuItem>
-      </Menu>
-    </LayoutSider>
-
-    <ALayout>
-      <LayoutHeader class="app-header">
-        <div class="header-leading">
-          <Button
-            class="collapse-button"
-            type="text"
-            :aria-label="collapsed ? '展开导航' : '收起导航'"
-            @click="collapsed = !collapsed"
-          >
-            <IconMenuUnfold v-if="collapsed" />
-            <IconMenuFold v-else />
-          </Button>
-          <Breadcrumb>
-            <BreadcrumbItem>{{ appTitle }}</BreadcrumbItem>
-            <BreadcrumbItem>{{ currentTitle }}</BreadcrumbItem>
-          </Breadcrumb>
-        </div>
-
-        <div class="user-placeholder">
-          <Avatar :size="32">
-            <IconUser />
-          </Avatar>
-          <span>用户</span>
-        </div>
-      </LayoutHeader>
-
-      <LayoutContent class="app-content">
         <RouterView />
-      </LayoutContent>
-    </ALayout>
-  </ALayout>
+      </div>
+    </main>
+    <WorkPanel v-if="!isSettingsPage && workPanelOpen" />
+  </div>
 </template>
