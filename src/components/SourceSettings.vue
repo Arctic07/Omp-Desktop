@@ -1,17 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
-import { getSourceCopy } from '../i18n'
+import { getSourceCopy, type SourceSettingsSectionId } from '../i18n'
+import AboutSection from './settings/AboutSection.vue'
+import AgentModesSection from './settings/AgentModesSection.vue'
+import AppearanceSection from './settings/AppearanceSection.vue'
+import GeneralSection from './settings/GeneralSection.vue'
+import ModelsSection from './settings/ModelsSection.vue'
+import PluginsSection from './settings/PluginsSection.vue'
+import SessionsSection from './settings/SessionsSection.vue'
+import SkillsSection from './settings/SkillsSection.vue'
 import { AppIcon } from './icons'
 
 const copy = getSourceCopy()
+const navigation = copy.settingsNavigation
+const activeSection = ref<SourceSettingsSectionId>(navigation[0]?.id ?? 'general')
+const activeNavigationItem = computed(() => navigation.find((item) => item.id === activeSection.value) ?? navigation[0])
 
 const emit = defineEmits<{
   close: []
 }>()
-
-const activeSection = ref(copy.settingsSections[0] ?? copy.settingsTitle)
-const sections = copy.settingsSections
 </script>
 
 <template>
@@ -19,55 +27,42 @@ const sections = copy.settingsSections
     <aside class="dsh-settings-nav">
       <div class="dsh-settings-heading-row">
         <h1>{{ copy.settingsTitle }}</h1>
-        <button class="dsh-settings-close" type="button" :aria-label="copy.settingsTitle" @click="emit('close')">
+        <button class="dsh-settings-close" type="button" :aria-label="copy.closeSettings" @click="emit('close')">
           <AppIcon name="x" :size="18" />
         </button>
       </div>
       <nav :aria-label="copy.settingsTitle">
         <button
-          v-for="section in sections"
-          :key="section"
+          v-for="section in navigation"
+          :key="section.id"
           class="dsh-settings-nav-item"
-          :class="{ 'dsh-settings-nav-item-active': activeSection === section }"
+          :class="{ 'dsh-settings-nav-item-active': activeSection === section.id }"
           type="button"
-          @click="activeSection = section"
+          :aria-current="activeSection === section.id ? 'page' : undefined"
+          @click="activeSection = section.id"
         >
-          {{ section }}
+          {{ section.label }}
         </button>
       </nav>
     </aside>
     <div class="dsh-settings-content">
       <div class="dsh-settings-content-inner">
         <p class="dsh-settings-kicker">{{ copy.settingsTitle }}</p>
-        <h2>{{ activeSection }}</h2>
-        <p class="dsh-settings-description">
-          {{ copy.settingsDescription }}
-        </p>
-        <div class="dsh-settings-card">
-          <div class="dsh-settings-row">
-            <div>
-              <strong>{{ copy.settingsSections[6] }}</strong>
-              <span>{{ copy.systemTheme }}</span>
-            </div>
-            <button class="dsh-settings-switch" type="button" :aria-label="copy.systemTheme" aria-pressed="true">
-              <span />
-            </button>
-          </div>
-          <div class="dsh-settings-row">
-            <div>
-              <strong>{{ copy.language }}</strong>
-              <span>{{ copy.english }}</span>
-            </div>
-            <AppIcon name="chevron-down" :size="16" />
-          </div>
-          <div class="dsh-settings-row">
-            <div>
-              <strong>{{ copy.fontSize }}</strong>
-              <span>{{ copy.fourteenPixels }}</span>
-            </div>
-            <AppIcon name="chevron-down" :size="16" />
-          </div>
-        </div>
+        <template v-if="activeNavigationItem">
+          <h2>{{ activeNavigationItem.label }}</h2>
+          <p class="dsh-settings-description">
+            {{ copy.settingsPage.sectionDescriptions[activeSection] }}
+          </p>
+        </template>
+
+        <GeneralSection v-if="activeSection === 'general'" :copy="copy.settingsPage.general" />
+        <ModelsSection v-else-if="activeSection === 'models'" :copy="copy.settingsPage.models" />
+        <AgentModesSection v-else-if="activeSection === 'agent-modes'" :copy="copy.settingsPage.agentModes" />
+        <SkillsSection v-else-if="activeSection === 'skills'" :copy="copy.settingsPage.skills" />
+        <PluginsSection v-else-if="activeSection === 'plugins'" :copy="copy.settingsPage.plugins" />
+        <SessionsSection v-else-if="activeSection === 'sessions'" :copy="copy.settingsPage.sessions" />
+        <AppearanceSection v-else-if="activeSection === 'appearance'" :copy="copy.settingsPage.appearance" />
+        <AboutSection v-else :copy="copy.settingsPage.about" />
       </div>
     </div>
   </section>
