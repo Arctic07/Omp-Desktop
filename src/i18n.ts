@@ -48,6 +48,12 @@ export interface SourceSettingsGeneralCopy {
   busyOptions: readonly SourceSettingChoice<SourceBusyBehavior>[]
 }
 
+export interface SourceSettingsModel {
+  id: string
+  name?: string
+  capacity?: string
+}
+
 export interface SourceSettingsModelsCopy {
   title: string
   description: string
@@ -55,12 +61,42 @@ export interface SourceSettingsModelsCopy {
   providerDescription: string
   activeLabel: string
   configuredLabel: string
+  availableLabel: string
   unavailableLabel: string
   configure: string
+  edit: string
   hideConfiguration: string
+  deleteProvider: string
+  apiKeyLabel: string
+  apiKeyPlaceholder: string
+  apiKeyConfiguredPlaceholder: string
+  customSettings: string
+  customSettingsDescription: string
   endpointLabel: string
   endpointPlaceholder: string
+  modelCatalogTitle: string
+  modelCatalogDescription: string
+  restoreDefaultModels: string
+  fetchModels: string
+  fetchingModels: string
+  modelIdLabel: string
+  modelNameLabel: string
+  modelCapacityLabel: string
+  modelCapacityPlaceholder: string
+  manualModelIdPlaceholder: string
+  manualModelNamePlaceholder: string
+  addModel: string
+  removeModel: string
+  expandModel: string
+  collapseModel: string
+  modelsEmpty: string
+  invalidEndpoint: string
+  fetchFailed: string
+  fetchEmpty: string
+  modelIdRequired: string
+  duplicateModelId: string
   save: string
+  cancel: string
   saved: string
   providers: readonly {
     id: string
@@ -68,7 +104,22 @@ export interface SourceSettingsModelsCopy {
     description: string
     model: string
     status: 'configured' | 'available' | 'unavailable'
+    endpoint?: string
+    models?: readonly SourceSettingsModel[]
   }[]
+  picker: {
+    title: string
+    description: string
+    close: string
+    searchLabel: string
+    searchPlaceholder: string
+    selectAll: string
+    clearAll: string
+    listLabel: string
+    noMatches: string
+    cancel: string
+    addSelected: string
+  }
 }
 
 export interface SourceSettingsAgentModesCopy {
@@ -315,18 +366,94 @@ const en: SourceCopy = {
       providerDescription: 'The selected provider is used for new conversations.',
       activeLabel: 'Active',
       configuredLabel: 'Configured',
+      availableLabel: 'Available',
       unavailableLabel: 'Unavailable',
       configure: 'Configure',
+      edit: 'Edit',
       hideConfiguration: 'Hide configuration',
-      endpointLabel: 'Endpoint',
+      deleteProvider: 'Delete provider',
+      apiKeyLabel: 'API key',
+      apiKeyPlaceholder: 'Enter an API key',
+      apiKeyConfiguredPlaceholder: 'Configured — enter a new key to replace it',
+      customSettings: 'Custom settings',
+      customSettingsDescription: 'Set the API address and model catalog.',
+      endpointLabel: 'API address',
       endpointPlaceholder: 'https://api.example.com/v1',
-      save: 'Save endpoint',
-      saved: 'Endpoint saved for this session',
+      modelCatalogTitle: 'Model catalog',
+      modelCatalogDescription: 'Manage the models available for this provider.',
+      restoreDefaultModels: 'Restore default models',
+      fetchModels: 'Get available models',
+      fetchingModels: 'Getting models…',
+      modelIdLabel: 'Model ID',
+      modelNameLabel: 'Display name',
+      modelCapacityLabel: 'Capacity',
+      modelCapacityPlaceholder: 'Optional context or capacity note',
+      manualModelIdPlaceholder: 'model-id',
+      manualModelNamePlaceholder: 'Display name (optional)',
+      addModel: 'Add model',
+      removeModel: 'Remove model',
+      expandModel: 'Expand model details',
+      collapseModel: 'Collapse model details',
+      modelsEmpty: 'No models configured.',
+      invalidEndpoint: 'Enter a valid HTTP or HTTPS API address first.',
+      fetchFailed: 'Could not fetch models from this API address.',
+      fetchEmpty: 'The API returned no usable models.',
+      modelIdRequired: 'Every model must have a model ID.',
+      duplicateModelId: 'Model IDs must be unique.',
+      save: 'Save',
+      cancel: 'Cancel',
+      saved: 'Saved for this session',
       providers: [
-        { id: 'deepseek', name: 'DeepSeek', description: 'Hosted reasoning and chat models.', model: 'DeepSeek Chat', status: 'configured' },
-        { id: 'ollama', name: 'Ollama', description: 'Run models on this device.', model: 'Local models', status: 'available' },
-        { id: 'openai-compatible', name: 'OpenAI compatible', description: 'Connect any compatible gateway.', model: 'Custom endpoint', status: 'available' },
+        {
+          id: 'openai',
+          name: 'OpenAI',
+          description: 'Hosted general-purpose models.',
+          model: 'GPT-4o mini',
+          status: 'available',
+          endpoint: 'https://api.openai.com/v1',
+          models: [{ id: 'gpt-4o-mini', name: 'GPT-4o mini' }, { id: 'gpt-4o', name: 'GPT-4o' }],
+        },
+        {
+          id: 'deepseek',
+          name: 'DeepSeek',
+          description: 'Hosted reasoning and chat models.',
+          model: 'DeepSeek Chat',
+          status: 'configured',
+          endpoint: 'https://api.deepseek.com/v1',
+          models: [{ id: 'deepseek-chat', name: 'DeepSeek Chat' }, { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner' }],
+        },
+        {
+          id: 'ollama',
+          name: 'Ollama',
+          description: 'Run models on this device.',
+          model: 'Local models',
+          status: 'available',
+          endpoint: 'http://localhost:11434/v1',
+          models: [{ id: 'llama3.2', name: 'Llama 3.2' }],
+        },
+        {
+          id: 'openai-compatible',
+          name: 'OpenAI compatible',
+          description: 'Connect any compatible gateway.',
+          model: 'Custom endpoint',
+          status: 'available',
+          endpoint: 'https://api.example.com/v1',
+          models: [],
+        },
       ],
+      picker: {
+        title: 'Select models to add',
+        description: 'Choose models returned by the provider API.',
+        close: 'Close model picker',
+        searchLabel: 'Search models',
+        searchPlaceholder: 'Search models',
+        selectAll: 'Select all',
+        clearAll: 'Clear all',
+        listLabel: 'Available models',
+        noMatches: 'No matching models.',
+        cancel: 'Cancel',
+        addSelected: 'Add selected',
+      },
     },
     agentModes: {
       title: 'Agent modes',
@@ -542,18 +669,94 @@ const zh: SourceCopy = {
       providerDescription: '新建对话会使用当前选中的供应商。',
       activeLabel: '当前使用',
       configuredLabel: '已配置',
+      availableLabel: '可用',
       unavailableLabel: '不可用',
       configure: '配置',
+      edit: '编辑',
       hideConfiguration: '收起配置',
-      endpointLabel: '接口地址',
+      deleteProvider: '删除提供方',
+      apiKeyLabel: 'API 密钥',
+      apiKeyPlaceholder: '输入 API 密钥',
+      apiKeyConfiguredPlaceholder: '已配置——输入新值可替换',
+      customSettings: '自定义设置',
+      customSettingsDescription: '设置 API 地址和模型目录。',
+      endpointLabel: 'API 地址',
       endpointPlaceholder: 'https://api.example.com/v1',
-      save: '保存地址',
-      saved: '本次设置中已保存接口地址',
+      modelCatalogTitle: '模型目录',
+      modelCatalogDescription: '管理该提供方可用的模型。',
+      restoreDefaultModels: '恢复默认模型',
+      fetchModels: '获取可用模型',
+      fetchingModels: '正在获取模型…',
+      modelIdLabel: '模型 ID',
+      modelNameLabel: '显示名称',
+      modelCapacityLabel: '容量',
+      modelCapacityPlaceholder: '可选的上下文或容量说明',
+      manualModelIdPlaceholder: 'model-id',
+      manualModelNamePlaceholder: '显示名称（可选）',
+      addModel: '添加模型',
+      removeModel: '删除模型',
+      expandModel: '展开模型详情',
+      collapseModel: '收起模型详情',
+      modelsEmpty: '尚未配置模型。',
+      invalidEndpoint: '请先输入有效的 HTTP 或 HTTPS API 地址。',
+      fetchFailed: '无法从该 API 地址获取模型。',
+      fetchEmpty: 'API 未返回可用模型。',
+      modelIdRequired: '每个模型都必须填写模型 ID。',
+      duplicateModelId: '模型 ID 必须唯一。',
+      save: '保存',
+      cancel: '取消',
+      saved: '已保存到本次设置',
       providers: [
-        { id: 'deepseek', name: 'DeepSeek', description: '托管推理和对话模型。', model: 'DeepSeek Chat', status: 'configured' },
-        { id: 'ollama', name: 'Ollama', description: '在当前设备运行模型。', model: '本地模型', status: 'available' },
-        { id: 'openai-compatible', name: 'OpenAI 兼容', description: '连接兼容的模型网关。', model: '自定义接口', status: 'available' },
+        {
+          id: 'openai',
+          name: 'OpenAI',
+          description: '托管通用模型。',
+          model: 'GPT-4o mini',
+          status: 'available',
+          endpoint: 'https://api.openai.com/v1',
+          models: [{ id: 'gpt-4o-mini', name: 'GPT-4o mini' }, { id: 'gpt-4o', name: 'GPT-4o' }],
+        },
+        {
+          id: 'deepseek',
+          name: 'DeepSeek',
+          description: '托管推理和对话模型。',
+          model: 'DeepSeek Chat',
+          status: 'configured',
+          endpoint: 'https://api.deepseek.com/v1',
+          models: [{ id: 'deepseek-chat', name: 'DeepSeek Chat' }, { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner' }],
+        },
+        {
+          id: 'ollama',
+          name: 'Ollama',
+          description: '在当前设备运行模型。',
+          model: '本地模型',
+          status: 'available',
+          endpoint: 'http://localhost:11434/v1',
+          models: [{ id: 'llama3.2', name: 'Llama 3.2' }],
+        },
+        {
+          id: 'openai-compatible',
+          name: 'OpenAI 兼容',
+          description: '连接兼容的模型网关。',
+          model: '自定义接口',
+          status: 'available',
+          endpoint: 'https://api.example.com/v1',
+          models: [],
+        },
       ],
+      picker: {
+        title: '选择要添加的模型',
+        description: '选择提供方 API 返回的模型。',
+        close: '关闭模型选择窗口',
+        searchLabel: '搜索模型',
+        searchPlaceholder: '搜索模型',
+        selectAll: '全选',
+        clearAll: '取消全选',
+        listLabel: '可用模型',
+        noMatches: '没有匹配的模型。',
+        cancel: '取消',
+        addSelected: '添加所选',
+      },
     },
     agentModes: {
       title: '智能体模式',

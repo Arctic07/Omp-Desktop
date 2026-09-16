@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+
+import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 
 import { getSourceCopy } from '../i18n'
 import { AppIcon } from './icons'
@@ -8,8 +11,34 @@ import SourceComposer from './SourceComposer.vue'
 
 const copy = getSourceCopy()
 
-const workspaceMenuOpen = ref(false)
+const workspacePath = ref<string | null>(null)
 
+async function loadWorkspacePath(): Promise<void> {
+  try {
+    const currentWorkingDirectory = await invoke<string>('current_working_directory')
+    workspacePath.value = currentWorkingDirectory
+  } catch {
+    workspacePath.value = null
+  }
+}
+
+async function chooseWorkspace(): Promise<void> {
+  try {
+    const selectedPath = await open({
+      directory: true,
+      multiple: false,
+      title: copy.chooseWorkspace,
+    })
+
+    if (typeof selectedPath === 'string') workspacePath.value = selectedPath
+  } catch {
+    // Keep the current workspace when the native dialog cannot open.
+  }
+}
+
+onMounted(() => {
+  void loadWorkspacePath()
+})
 </script>
 
 <template>
@@ -33,21 +62,22 @@ const workspaceMenuOpen = ref(false)
                 <button
                   class="dsh-hero-workspace"
                   type="button"
-                  :aria-label="copy.chooseWorkspace"
-                  aria-haspopup="menu"
-                  :aria-expanded="workspaceMenuOpen"
-                  @click="workspaceMenuOpen = !workspaceMenuOpen"
+                  :aria-label="workspacePath ?? copy.chooseWorkspace"
+                  aria-haspopup="dialog"
+                  :title="workspacePath ?? copy.chooseWorkspace"
+                  @click="chooseWorkspace"
                 >
                   <AppIcon name="folder" class="dsh-hero-workspace-folder" :size="16" />
-                  <span>{{ copy.chooseWorkspace }}</span>
+                  <span class="dsh-hero-workspace-path">{{ workspacePath ?? copy.chooseWorkspace }}</span>
                   <AppIcon name="chevron-down" class="dsh-hero-workspace-chevron" :size="12" />
                 </button>
-                <div v-if="workspaceMenuOpen" class="dsh-hero-workspace-menu" role="menu">
-                  <button type="button" role="menuitem" @click="workspaceMenuOpen = false">{{ copy.addWorkspaceMenu }}</button>
-                </div>
               </div>
 
-              <SourceComposer :disabled="true" :workspace-trigger="true" @request-workspace="workspaceMenuOpen = true" />
+              <SourceComposer
+                :disabled="workspacePath === null"
+                :workspace-trigger="workspacePath === null"
+                @request-workspace="chooseWorkspace"
+              />
             </div>
           </div>
         </div>
@@ -55,3 +85,4 @@ const workspaceMenuOpen = ref(false)
     </div>
   </section>
 </template>
+
