@@ -260,11 +260,14 @@ export interface SourceCopy {
   messagePlaceholder: string
   addFiles: string
   sendMessage: string
+  planMode: string
+  modelLabel: string
   settingsTitle: string
   closeSettings: string
   settingsSections: readonly string[]
   settingsNavigation: readonly SourceSettingsNavigationItem[]
   settingsDescription: string
+  settingsPage: SourceSettingsCopy
   systemTheme: string
   language: string
   english: string
@@ -273,7 +276,7 @@ export interface SourceCopy {
 }
 
 const en: SourceCopy = {
-  brand: 'DSH Local Build',
+  brand: 'Omp Desktop',
   newSession: 'New Session',
   newSessionLabel: 'New session',
   openSidebar: 'Open sidebar',
@@ -294,6 +297,8 @@ const en: SourceCopy = {
   messagePlaceholder: 'Message or run a task',
   addFiles: 'Add files or run commands',
   sendMessage: 'Send message',
+  planMode: 'Plan',
+  modelLabel: 'Model',
   settingsTitle: 'Settings',
   closeSettings: 'Close settings',
   settingsSections: ['General', 'Models', 'Agent modes', 'Skills', 'Plugins', 'Sessions', 'Appearance', 'About'],
@@ -576,7 +581,7 @@ const en: SourceCopy = {
 }
 
 const zh: SourceCopy = {
-  brand: 'DSH 本地构建',
+  brand: 'Omp Desktop',
   newSession: '新会话',
   newSessionLabel: '新建会话',
   openSidebar: '打开侧边栏',
@@ -596,6 +601,8 @@ const zh: SourceCopy = {
   composerPlaceholder: '选择一个工作区开始',
   addFiles: '添加文件或调用指令',
   sendMessage: '发送消息',
+  planMode: '计划',
+  modelLabel: '模型',
   messagePlaceholder: '发消息或创建任务',
   settingsTitle: '设置',
   closeSettings: '关闭设置',
@@ -878,6 +885,7 @@ const zh: SourceCopy = {
   fourteenPixels: '14px',
 }
 
-export function getSourceCopy(): SourceCopy {
-  return typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('zh') ? zh : en
+export function getSourceCopy(language?: SourceLanguage): SourceCopy {
+  const selectedLanguage = language ?? (typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en')
+  return selectedLanguage === 'zh' ? zh : en
 }

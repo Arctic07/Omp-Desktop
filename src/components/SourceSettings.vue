@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import { getSourceCopy, type SourceSettingsSectionId } from '../i18n'
+import { type SourceSettingsSectionId } from '../i18n'
+import { useAppSettings } from '../stores/appSettings'
 import AboutSection from './settings/AboutSection.vue'
 import AgentModesSection from './settings/AgentModesSection.vue'
 import AppearanceSection from './settings/AppearanceSection.vue'
@@ -12,10 +13,12 @@ import SessionsSection from './settings/SessionsSection.vue'
 import SkillsSection from './settings/SkillsSection.vue'
 import { AppIcon } from './icons'
 
-const copy = getSourceCopy()
-const navigation = copy.settingsNavigation
-const activeSection = ref<SourceSettingsSectionId>(navigation[0]?.id ?? 'general')
-const activeNavigationItem = computed(() => navigation.find((item) => item.id === activeSection.value) ?? navigation[0])
+const { copy } = useAppSettings()
+const navigation = computed(() => copy.value.settingsNavigation)
+const activeSection = ref<SourceSettingsSectionId>(navigation.value[0]?.id ?? 'general')
+const activeNavigationItem = computed(
+  () => navigation.value.find((item) => item.id === activeSection.value) ?? navigation.value[0],
+)
 
 const emit = defineEmits<{
   close: []

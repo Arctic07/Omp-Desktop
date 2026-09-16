@@ -4,13 +4,17 @@ import { onMounted, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 
-import { getSourceCopy } from '../i18n'
+import { useAppSettings } from '../stores/appSettings'
 import { AppIcon } from './icons'
 import FishLogo from './FishLogo.vue'
 import SourceComposer from './SourceComposer.vue'
+import SourceConversationFeed from './SourceConversationFeed.vue'
 
-const copy = getSourceCopy()
+const props = defineProps<{
+  sessionId: string | null
+}>()
 
+const { copy } = useAppSettings()
 const workspacePath = ref<string | null>(null)
 
 async function loadWorkspacePath(): Promise<void> {
@@ -27,7 +31,7 @@ async function chooseWorkspace(): Promise<void> {
     const selectedPath = await open({
       directory: true,
       multiple: false,
-      title: copy.chooseWorkspace,
+      title: copy.value.chooseWorkspace,
     })
 
     if (typeof selectedPath === 'string') workspacePath.value = selectedPath
@@ -44,11 +48,12 @@ onMounted(() => {
 <template>
   <section class="dsh-conversation-root" data-phase="hero" aria-label="Conversation">
     <div class="dsh-conversation-body">
-      <div class="dsh-conversation-scroll-body">
-        <div class="dsh-composer-seat dsh-composer-hero">
+      <div class="dsh-conversation-scroll-body" :class="{ 'dsh-conversation-scroll-body-session': props.sessionId !== null }">
+        <SourceConversationFeed v-if="props.sessionId !== null" :session-id="props.sessionId" />
+        <div class="dsh-composer-seat" :class="{ 'dsh-composer-hero': props.sessionId === null, 'dsh-composer-seat-session': props.sessionId !== null }">
           <div class="dsh-hero-shell">
             <div class="dsh-hero-stack">
-              <div class="dsh-hero-headline">
+              <div v-if="props.sessionId === null" class="dsh-hero-headline">
                 <span class="dsh-hero-fish-hitbox">
                   <FishLogo class="dsh-hero-fish" :size="34" />
                 </span>

@@ -1,34 +1,37 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-import type {
-  SourceBusyBehavior,
-  SourceConversationDensity,
-  SourceLanguage,
-  SourcePermissionMode,
-  SourceSettingsGeneralCopy,
-  SourceTheme,
-} from '../../i18n'
+import { APP_FONT_SIZE_MAX, APP_FONT_SIZE_MIN, useAppSettings } from '../../stores/appSettings'
+import type { SourcePermissionMode, SourceSettingsGeneralCopy } from '../../i18n'
 import { AppIcon } from '../icons'
 
 const props = defineProps<{
   copy: SourceSettingsGeneralCopy
 }>()
 
-const defaultLanguage: SourceLanguage = typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 const permissionMode = ref<SourcePermissionMode>('ask')
-const language = ref<SourceLanguage>(defaultLanguage)
-const theme = ref<SourceTheme>('system')
-const fontSize = ref(14)
-const conversationDensity = ref<SourceConversationDensity>('comfortable')
-const busyBehavior = ref<SourceBusyBehavior>('queue')
+const {
+  settings,
+  setLanguage,
+  setTheme,
+  setFontSize,
+  setConversationDensity,
+  setBusyBehavior,
+} = useAppSettings()
+
+function handleLanguageChange(event: Event) {
+  const value = (event.target as HTMLSelectElement).value
+  if (value === 'en' || value === 'zh') {
+    setLanguage(value)
+  }
+}
 
 function decreaseFontSize() {
-  fontSize.value = Math.max(12, fontSize.value - 1)
+  setFontSize(settings.fontSize - 1)
 }
 
 function increaseFontSize() {
-  fontSize.value = Math.min(20, fontSize.value + 1)
+  setFontSize(settings.fontSize + 1)
 }
 </script>
 
@@ -75,7 +78,7 @@ function increaseFontSize() {
           </div>
           <label class="dsh-settings-select-wrap">
             <span class="dsh-settings-visually-hidden">{{ props.copy.languageTitle }}</span>
-            <select v-model="language" class="dsh-settings-select" :aria-label="props.copy.languageTitle">
+            <select :value="settings.language" class="dsh-settings-select" :aria-label="props.copy.languageTitle" @change="handleLanguageChange">
               <option v-for="option in props.copy.languageOptions" :key="option.value" :value="option.value">
                 {{ option.label }}
               </option>
@@ -94,10 +97,10 @@ function increaseFontSize() {
               v-for="option in props.copy.themeOptions"
               :key="option.value"
               class="dsh-settings-choice"
-              :class="{ 'dsh-settings-choice-active': theme === option.value }"
+              :class="{ 'dsh-settings-choice-active': settings.theme === option.value }"
               type="button"
-              :aria-pressed="theme === option.value"
-              @click="theme = option.value"
+              :aria-pressed="settings.theme === option.value"
+              @click="setTheme(option.value)"
             >
               {{ option.label }}
             </button>
@@ -113,16 +116,16 @@ function increaseFontSize() {
             <button
               type="button"
               :aria-label="props.copy.decreaseFontSize"
-              :disabled="fontSize <= 12"
+              :disabled="settings.fontSize <= APP_FONT_SIZE_MIN"
               @click="decreaseFontSize"
             >
               <AppIcon name="minus" :size="14" />
             </button>
-            <output :aria-label="props.copy.fontSizeTitle">{{ fontSize }}px</output>
+            <output :aria-label="props.copy.fontSizeTitle">{{ settings.fontSize }}px</output>
             <button
               type="button"
               :aria-label="props.copy.increaseFontSize"
-              :disabled="fontSize >= 20"
+              :disabled="settings.fontSize >= APP_FONT_SIZE_MAX"
               @click="increaseFontSize"
             >
               <AppIcon name="plus" :size="14" />
@@ -140,10 +143,10 @@ function increaseFontSize() {
               v-for="option in props.copy.conversationOptions"
               :key="option.value"
               class="dsh-settings-choice"
-              :class="{ 'dsh-settings-choice-active': conversationDensity === option.value }"
+              :class="{ 'dsh-settings-choice-active': settings.conversationDensity === option.value }"
               type="button"
-              :aria-pressed="conversationDensity === option.value"
-              @click="conversationDensity = option.value"
+              :aria-pressed="settings.conversationDensity === option.value"
+              @click="setConversationDensity(option.value)"
             >
               {{ option.label }}
             </button>
@@ -160,10 +163,10 @@ function increaseFontSize() {
               v-for="option in props.copy.busyOptions"
               :key="option.value"
               class="dsh-settings-choice"
-              :class="{ 'dsh-settings-choice-active': busyBehavior === option.value }"
+              :class="{ 'dsh-settings-choice-active': settings.busyBehavior === option.value }"
               type="button"
-              :aria-pressed="busyBehavior === option.value"
-              @click="busyBehavior = option.value"
+              :aria-pressed="settings.busyBehavior === option.value"
+              @click="setBusyBehavior(option.value)"
             >
               {{ option.label }}
             </button>
