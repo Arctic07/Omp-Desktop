@@ -76,20 +76,20 @@ function addSelectedModels() {
 </script>
 
 <template>
-  <div v-if='props.open' class='dsh-model-picker-layer' @keydown.esc='emit("close")'>
+  <div v-if='props.open' class='omp-model-picker-layer' @keydown.esc='emit("close")'>
     <section
-      class='dsh-model-picker-dialog'
+      class='omp-model-picker-dialog'
       role='dialog'
       aria-modal='true'
-      aria-labelledby='dsh-model-picker-title'
+      aria-labelledby='omp-model-picker-title'
     >
-      <header class='dsh-model-picker-header'>
+      <header class='omp-model-picker-header'>
         <div>
-          <h3 id='dsh-model-picker-title'>{{ props.copy.title }}</h3>
+          <h3 id='omp-model-picker-title'>{{ props.copy.title }}</h3>
           <p>{{ props.copy.description }}</p>
         </div>
         <button
-          class='dsh-model-picker-close'
+          class='omp-model-picker-close'
           type='button'
           :aria-label='props.copy.close'
           @click='emit("close")'
@@ -98,10 +98,10 @@ function addSelectedModels() {
         </button>
       </header>
 
-      <div class='dsh-model-picker-toolbar'>
-        <label class='dsh-model-picker-search'>
+      <div class='omp-model-picker-toolbar'>
+        <label class='omp-model-picker-search'>
           <AppIcon name='search' :size='16' aria-hidden='true' />
-          <span class='dsh-settings-visually-hidden'>{{ props.copy.searchLabel }}</span>
+          <span class='omp-settings-visually-hidden'>{{ props.copy.searchLabel }}</span>
           <input
             v-model='searchQuery'
             type='search'
@@ -111,7 +111,7 @@ function addSelectedModels() {
           />
         </label>
         <button
-          class='dsh-settings-button dsh-settings-button-small'
+          class='omp-settings-button omp-settings-button-small'
           type='button'
           :aria-pressed='allVisibleSelected'
           :disabled='filteredCandidates.length === 0'
@@ -121,26 +121,26 @@ function addSelectedModels() {
         </button>
       </div>
 
-      <div class='dsh-model-picker-list' role='group' :aria-label='props.copy.listLabel'>
-        <label v-for='candidate in filteredCandidates' :key='candidate.id' class='dsh-model-picker-option'>
+      <div class='omp-model-picker-list' role='group' :aria-label='props.copy.listLabel'>
+        <label v-for='candidate in filteredCandidates' :key='candidate.id' class='omp-model-picker-option'>
           <input
             type='checkbox'
             :checked='selectedIds.has(candidate.id)'
             :aria-label='candidate.name ? `${candidate.name} (${candidate.id})` : candidate.id'
             @change='toggleCandidate(candidate.id)'
           />
-          <span class='dsh-model-picker-option-copy'>
+          <span class='omp-model-picker-option-copy'>
             <strong>{{ candidate.name || candidate.id }}</strong>
             <small v-if='candidate.name'>{{ candidate.id }}</small>
           </span>
         </label>
-        <p v-if='filteredCandidates.length === 0' class='dsh-model-picker-empty'>{{ props.copy.noMatches }}</p>
+        <p v-if='filteredCandidates.length === 0' class='omp-model-picker-empty'>{{ props.copy.noMatches }}</p>
       </div>
 
-      <footer class='dsh-model-picker-actions'>
-        <button class='dsh-settings-button' type='button' @click='emit("close")'>{{ props.copy.cancel }}</button>
+      <footer class='omp-model-picker-actions'>
+        <button class='omp-settings-button' type='button' @click='emit("close")'>{{ props.copy.cancel }}</button>
         <button
-          class='dsh-settings-button dsh-settings-button-primary'
+          class='omp-settings-button omp-settings-button-primary'
           type='button'
           :disabled='selectedIds.size === 0'
           @click='addSelectedModels'

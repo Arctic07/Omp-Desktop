@@ -21,8 +21,8 @@ function selectSession(sessionId: string) {
 </script>
 
 <template>
-  <div class="dsh-frame" :class="{ 'dsh-frame-sidebar-collapsed': sidebarCollapsed }">
-    <div class="dsh-sidebar-column">
+  <div class="omp-frame" :class="{ 'omp-frame-sidebar-collapsed': sidebarCollapsed }">
+    <div class="omp-sidebar-column">
       <SourceSidebar
         :collapsed="sidebarCollapsed"
         :active-session-id="activeSessionId"
@@ -32,7 +32,7 @@ function selectSession(sessionId: string) {
         @open-settings="settingsOpen = true"
       />
     </div>
-    <main class="dsh-center-column">
+    <main class="omp-center-column">
       <SourceConversation v-if="!settingsOpen" :session-id="activeSessionId" />
     </main>
     <SourceSettings v-if="settingsOpen" @close="settingsOpen = false" />

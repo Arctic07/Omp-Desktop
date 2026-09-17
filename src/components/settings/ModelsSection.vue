@@ -347,43 +347,43 @@ function addSelectedModels(models: ModelPickerCandidate[]) {
 </script>
 
 <template>
-  <div class='dsh-settings-stack'>
-    <section class='dsh-settings-group' :aria-labelledby="'dsh-settings-models-providers'">
-      <div class='dsh-settings-group-heading'>
-        <h3 id='dsh-settings-models-providers'>{{ props.copy.providerTitle }}</h3>
+  <div class='omp-settings-stack'>
+    <section class='omp-settings-group' :aria-labelledby="'omp-settings-models-providers'">
+      <div class='omp-settings-group-heading'>
+        <h3 id='omp-settings-models-providers'>{{ props.copy.providerTitle }}</h3>
         <p>{{ props.copy.providerDescription }}</p>
       </div>
 
-      <div class='dsh-model-provider-list'>
+      <div class='omp-model-provider-list'>
         <article
           v-for='provider in providers'
           :key='provider.id'
-          class='dsh-settings-card dsh-model-provider-card'
-          :class='{ "dsh-model-provider-card-active": activeProvider === provider.id }'
+          class='omp-settings-card omp-model-provider-card'
+          :class='{ "omp-model-provider-card-active": activeProvider === provider.id }'
         >
-          <header class='dsh-model-provider-header'>
+          <header class='omp-model-provider-header'>
             <button
-              class='dsh-model-provider-select'
+              class='omp-model-provider-select'
               type='button'
               :aria-pressed='activeProvider === provider.id'
               @click='activeProvider = provider.id'
             >
-              <span class='dsh-settings-list-item-icon' aria-hidden='true'>
+              <span class='omp-settings-list-item-icon' aria-hidden='true'>
                 <AppIcon name='bot' :size='17' />
               </span>
-              <span class='dsh-settings-row-copy'>
+              <span class='omp-settings-row-copy'>
                 <strong>{{ provider.name }}</strong>
                 <span>{{ provider.description }}</span>
                 <small>{{ provider.model }}</small>
               </span>
             </button>
-            <div class='dsh-model-provider-actions'>
-              <span class='dsh-model-provider-status' :class='`dsh-model-provider-status-${providerStatus(provider)}`'>
-                <span class='dsh-model-provider-status-dot' aria-hidden='true'></span>
+            <div class='omp-model-provider-actions'>
+              <span class='omp-model-provider-status' :class='`omp-model-provider-status-${providerStatus(provider)}`'>
+                <span class='omp-model-provider-status-dot' aria-hidden='true'></span>
                 {{ statusLabel(provider) }}
               </span>
               <button
-                class='dsh-settings-button dsh-settings-button-small'
+                class='omp-settings-button omp-settings-button-small'
                 type='button'
                 :aria-expanded='editingProvider === provider.id'
                 @click='toggleEditor(provider)'
@@ -392,7 +392,7 @@ function addSelectedModels(models: ModelPickerCandidate[]) {
                 {{ editingProvider === provider.id ? props.copy.hideConfiguration : props.copy.edit }}
               </button>
               <button
-                class='dsh-model-provider-delete'
+                class='omp-model-provider-delete'
                 type='button'
                 :aria-label='`${props.copy.deleteProvider}: ${provider.name}`'
                 @click='deleteProvider(provider.id)'
@@ -402,12 +402,12 @@ function addSelectedModels(models: ModelPickerCandidate[]) {
             </div>
           </header>
 
-          <div v-if='editingProvider === provider.id' class='dsh-model-provider-editor'>
-            <label class='dsh-model-api-key'>
-              <span class='dsh-settings-input-label'>{{ props.copy.apiKeyLabel }}</span>
+          <div v-if='editingProvider === provider.id' class='omp-model-provider-editor'>
+            <label class='omp-model-api-key'>
+              <span class='omp-settings-input-label'>{{ props.copy.apiKeyLabel }}</span>
               <input
                 v-model='provider.apiKey'
-                class='dsh-settings-input'
+                class='omp-settings-input'
                 type='password'
                 autocomplete='new-password'
                 :placeholder='provider.apiKeyConfigured ? props.copy.apiKeyConfiguredPlaceholder : props.copy.apiKeyPlaceholder'
@@ -415,7 +415,7 @@ function addSelectedModels(models: ModelPickerCandidate[]) {
             </label>
 
             <button
-              class='dsh-model-custom-settings-toggle'
+              class='omp-model-custom-settings-toggle'
               type='button'
               :aria-expanded='customSettingsProvider === provider.id'
               @click='toggleCustomSettings(provider.id)'
@@ -427,12 +427,12 @@ function addSelectedModels(models: ModelPickerCandidate[]) {
               <AppIcon name='chevron-down' :size='16' aria-hidden='true' />
             </button>
 
-            <div v-if='customSettingsProvider === provider.id' class='dsh-model-custom-settings'>
-              <label class='dsh-model-api-address'>
-                <span class='dsh-settings-input-label'>{{ props.copy.endpointLabel }}</span>
+            <div v-if='customSettingsProvider === provider.id' class='omp-model-custom-settings'>
+              <label class='omp-model-api-address'>
+                <span class='omp-settings-input-label'>{{ props.copy.endpointLabel }}</span>
                 <input
                   v-model='provider.endpoint'
-                  class='dsh-settings-input'
+                  class='omp-settings-input'
                   type='url'
                   autocomplete='url'
                   :placeholder='props.copy.endpointPlaceholder'
@@ -452,10 +452,10 @@ function addSelectedModels(models: ModelPickerCandidate[]) {
               />
             </div>
 
-            <p v-if='savedProvider === provider.id' class='dsh-settings-inline-note'>{{ props.copy.saved }}</p>
-            <div class='dsh-model-provider-footer'>
-              <button class='dsh-settings-button' type='button' @click='cancelProvider(provider)'>{{ props.copy.cancel }}</button>
-              <button class='dsh-settings-button dsh-settings-button-primary' type='button' @click='saveProvider(provider)'>
+            <p v-if='savedProvider === provider.id' class='omp-settings-inline-note'>{{ props.copy.saved }}</p>
+            <div class='omp-model-provider-footer'>
+              <button class='omp-settings-button' type='button' @click='cancelProvider(provider)'>{{ props.copy.cancel }}</button>
+              <button class='omp-settings-button omp-settings-button-primary' type='button' @click='saveProvider(provider)'>
                 {{ props.copy.save }}
               </button>
             </div>

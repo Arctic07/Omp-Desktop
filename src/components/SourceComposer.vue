@@ -101,11 +101,11 @@ function submit() {
 </script>
 
 <template>
-  <div class="dsh-composer" :class="{ 'dsh-composer-disabled': props.disabled, 'dsh-composer-trigger': props.workspaceTrigger }" data-composer-card @click="requestWorkspace">
-    <div class="dsh-composer-scroll">
+  <div class="omp-composer" :class="{ 'omp-composer-disabled': props.disabled, 'omp-composer-trigger': props.workspaceTrigger }" data-composer-card @click="requestWorkspace">
+    <div class="omp-composer-scroll">
       <div
-        class="dsh-composer-input"
-        :class="{ 'dsh-composer-input-disabled': props.disabled, 'dsh-composer-input-focused': focused }"
+        class="omp-composer-input"
+        :class="{ 'omp-composer-input-disabled': props.disabled, 'omp-composer-input-focused': focused }"
         :contenteditable="!props.disabled"
         role="textbox"
         aria-multiline="true"
@@ -117,18 +117,18 @@ function submit() {
         @keydown.enter.exact.prevent="submit"
         @click.stop
       >
-        <span v-if="draft.length === 0" class="dsh-composer-placeholder">{{ props.workspaceTrigger ? copy.composerPlaceholder : copy.messagePlaceholder }}</span>
+        <span v-if="draft.length === 0" class="omp-composer-placeholder">{{ props.workspaceTrigger ? copy.composerPlaceholder : copy.messagePlaceholder }}</span>
       </div>
     </div>
-    <div class="dsh-composer-row">
-      <div class="dsh-composer-tools">
-        <button class="dsh-composer-add" type="button" :aria-label="copy.addFiles" :disabled="props.disabled" @click.stop>
+    <div class="omp-composer-row">
+      <div class="omp-composer-tools">
+        <button class="omp-composer-add" type="button" :aria-label="copy.addFiles" :disabled="props.disabled" @click.stop>
           <AppIcon name="plus" :size="14" />
         </button>
-        <div v-if="!props.disabled" class="dsh-composer-modes">
+        <div v-if="!props.disabled" class="omp-composer-modes">
           <button
-            class="dsh-composer-select dsh-composer-access"
-            :class="{ 'dsh-composer-select-active': planActive }"
+            class="omp-composer-select omp-composer-access"
+            :class="{ 'omp-composer-select-active': planActive }"
             type="button"
             :aria-pressed="planActive"
             @click.stop="planActive = !planActive"
@@ -139,10 +139,10 @@ function submit() {
           </button>
         </div>
       </div>
-      <div class="dsh-composer-trailing">
-        <div v-if="!props.disabled" class="dsh-composer-model-picker">
+      <div class="omp-composer-trailing">
+        <div v-if="!props.disabled" class="omp-composer-model-picker">
           <button
-            class="dsh-composer-select dsh-composer-model"
+            class="omp-composer-select omp-composer-model"
             type="button"
             aria-haspopup="menu"
             :aria-expanded="modelMenuOpen"
@@ -151,77 +151,77 @@ function submit() {
             @click.stop="toggleModelMenu"
             @keydown.esc.stop="closeModelMenu"
           >
-            <span class="dsh-composer-model-name">{{ selectedModel.name }}</span>
-            <AppIcon name="chevron-down" :class="{ 'dsh-composer-model-chevron-open': modelMenuOpen }" :size="12" />
+            <span class="omp-composer-model-name">{{ selectedModel.name }}</span>
+            <AppIcon name="chevron-down" :class="{ 'omp-composer-model-chevron-open': modelMenuOpen }" :size="12" />
           </button>
           <div
             v-if="modelMenuOpen"
-            class="dsh-composer-model-menu"
+            class="omp-composer-model-menu"
             role="menu"
             :aria-label="modelMenuPane === 'thinking' ? copy.thinkingLabel : copy.modelLabel"
             @click.stop
             @keydown.esc.stop="closeModelMenu"
           >
-            <div v-if="modelMenuPane === 'root'" class="dsh-composer-model-menu-root">
+            <div v-if="modelMenuPane === 'root'" class="omp-composer-model-menu-root">
               <button
-                class="dsh-composer-model-menu-cell"
+                class="omp-composer-model-menu-cell"
                 type="button"
                 role="menuitem"
                 :aria-label="`${copy.modelLabel}: ${selectedModel.name}`"
                 @click="enterModelPane('model')"
               >
-                <span class="dsh-composer-model-menu-cell-copy">
+                <span class="omp-composer-model-menu-cell-copy">
                   <strong>{{ copy.modelLabel }}</strong>
                   <span>{{ selectedModel.name }}</span>
                 </span>
                 <AppIcon name="chevron-right" :size="14" />
               </button>
               <button
-                class="dsh-composer-model-menu-cell"
+                class="omp-composer-model-menu-cell"
                 type="button"
                 role="menuitem"
                 :aria-label="`${copy.thinkingLabel}: ${selectedThinking.label}`"
                 @click="enterModelPane('thinking')"
               >
-                <span class="dsh-composer-model-menu-cell-copy">
+                <span class="omp-composer-model-menu-cell-copy">
                   <strong>{{ copy.thinkingLabel }}</strong>
                   <span>{{ selectedThinking.label }}</span>
                 </span>
                 <AppIcon name="chevron-right" :size="14" />
               </button>
             </div>
-            <div v-else-if="modelMenuPane === 'model'" class="dsh-composer-model-menu-groups" :aria-label="copy.modelLabel">
-              <div v-for="group in modelGroups" :key="group.provider" class="dsh-composer-model-menu-group" role="group" :aria-label="group.provider">
-                <div class="dsh-composer-model-menu-group-title">{{ group.provider }}</div>
+            <div v-else-if="modelMenuPane === 'model'" class="omp-composer-model-menu-groups" :aria-label="copy.modelLabel">
+              <div v-for="group in modelGroups" :key="group.provider" class="omp-composer-model-menu-group" role="group" :aria-label="group.provider">
+                <div class="omp-composer-model-menu-group-title">{{ group.provider }}</div>
                 <button
                   v-for="model in group.models"
                   :key="model.id"
-                  class="dsh-composer-model-option"
-                  :class="{ 'dsh-composer-model-option-active': model.id === selectedModelId }"
+                  class="omp-composer-model-option"
+                  :class="{ 'omp-composer-model-option-active': model.id === selectedModelId }"
                   type="button"
                   role="menuitemradio"
                   :aria-checked="model.id === selectedModelId"
                   @click="selectModel(model.id)"
                 >
-                  <span class="dsh-composer-model-option-copy">
+                  <span class="omp-composer-model-option-copy">
                     <strong>{{ model.name }}</strong>
                   </span>
                   <AppIcon v-if="model.id === selectedModelId" name="check" :size="14" />
                 </button>
               </div>
             </div>
-            <div v-else class="dsh-composer-model-menu-thinking" role="group" :aria-label="copy.thinkingLabel">
+            <div v-else class="omp-composer-model-menu-thinking" role="group" :aria-label="copy.thinkingLabel">
               <button
                 v-for="option in copy.thinkingOptions"
                 :key="option.value"
-                class="dsh-composer-model-option"
-                :class="{ 'dsh-composer-model-option-active': option.value === selectedThinkingId }"
+                class="omp-composer-model-option"
+                :class="{ 'omp-composer-model-option-active': option.value === selectedThinkingId }"
                 type="button"
                 role="menuitemradio"
                 :aria-checked="option.value === selectedThinkingId"
                 @click="selectThinking(option.value)"
               >
-                <span class="dsh-composer-model-option-copy">
+                <span class="omp-composer-model-option-copy">
                   <strong>{{ option.label }}</strong>
                 </span>
                 <AppIcon v-if="option.value === selectedThinkingId" name="check" :size="14" />
@@ -229,7 +229,7 @@ function submit() {
             </div>
           </div>
         </div>
-        <button class="dsh-composer-send" type="button" :aria-label="copy.sendMessage" :disabled="!canSend" @click.stop="submit">
+        <button class="omp-composer-send" type="button" :aria-label="copy.sendMessage" :disabled="!canSend" @click.stop="submit">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
             <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 2.10714 6.51277 1.85793 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
           </svg>

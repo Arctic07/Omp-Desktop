@@ -135,10 +135,10 @@ function applyDomState(systemThemeMatches?: boolean): void {
   const isSystemDark = systemThemeMatches ?? systemThemeQuery?.matches === true
   const isDark = settings.theme === 'dark' || (settings.theme === 'system' && isSystemDark)
   body.toggleAttribute('data-ds-dark-theme', isDark)
-  body.dataset.dshConversationDensity = settings.conversationDensity
-  body.dataset.dshBusyBehavior = settings.busyBehavior
+  body.dataset.ompConversationDensity = settings.conversationDensity
+  body.dataset.ompBusyBehavior = settings.busyBehavior
   documentElement.lang = settings.language
-  documentElement.style.setProperty('--dsh-content-font-size', `${settings.fontSize}px`)
+  documentElement.style.setProperty('--omp-content-font-size', `${settings.fontSize}px`)
 }
 
 function onSystemThemeChange(event?: MediaQueryListEvent): void {

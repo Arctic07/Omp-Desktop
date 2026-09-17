@@ -11,7 +11,7 @@ withDefaults(
 
 <template>
   <img
-    class="dsh-fish-logo"
+    class="omp-fish-logo"
     :src="logoUrl"
     :width="size"
     :height="size"

@@ -36,24 +36,24 @@ function increaseFontSize() {
 </script>
 
 <template>
-  <div class="dsh-settings-stack">
-    <section class="dsh-settings-group" :aria-labelledby="'dsh-settings-general-permission'">
-      <div class="dsh-settings-group-heading">
-        <h3 id="dsh-settings-general-permission">{{ props.copy.permissionTitle }}</h3>
+  <div class="omp-settings-stack">
+    <section class="omp-settings-group" :aria-labelledby="'omp-settings-general-permission'">
+      <div class="omp-settings-group-heading">
+        <h3 id="omp-settings-general-permission">{{ props.copy.permissionTitle }}</h3>
         <p>{{ props.copy.permissionDescription }}</p>
       </div>
-      <div class="dsh-settings-card">
-        <div class="dsh-settings-row dsh-settings-row-stack">
-          <div class="dsh-settings-row-copy">
+      <div class="omp-settings-card">
+        <div class="omp-settings-row omp-settings-row-stack">
+          <div class="omp-settings-row-copy">
             <strong>{{ props.copy.permissionTitle }}</strong>
             <span>{{ props.copy.permissionDescription }}</span>
           </div>
-          <div class="dsh-settings-choice-group" role="group" :aria-label="props.copy.permissionTitle">
+          <div class="omp-settings-choice-group" role="group" :aria-label="props.copy.permissionTitle">
             <button
               v-for="option in props.copy.permissionOptions"
               :key="option.value"
-              class="dsh-settings-choice"
-              :class="{ 'dsh-settings-choice-active': permissionMode === option.value }"
+              class="omp-settings-choice"
+              :class="{ 'omp-settings-choice-active': permissionMode === option.value }"
               type="button"
               :aria-pressed="permissionMode === option.value"
               @click="permissionMode = option.value"
@@ -65,20 +65,20 @@ function increaseFontSize() {
       </div>
     </section>
 
-    <section class="dsh-settings-group" :aria-labelledby="'dsh-settings-general-preferences'">
-      <div class="dsh-settings-group-heading">
-        <h3 id="dsh-settings-general-preferences">{{ props.copy.title }}</h3>
+    <section class="omp-settings-group" :aria-labelledby="'omp-settings-general-preferences'">
+      <div class="omp-settings-group-heading">
+        <h3 id="omp-settings-general-preferences">{{ props.copy.title }}</h3>
         <p>{{ props.copy.description }}</p>
       </div>
-      <div class="dsh-settings-card">
-        <div class="dsh-settings-row">
-          <div class="dsh-settings-row-copy">
+      <div class="omp-settings-card">
+        <div class="omp-settings-row">
+          <div class="omp-settings-row-copy">
             <strong>{{ props.copy.languageTitle }}</strong>
             <span>{{ props.copy.languageDescription }}</span>
           </div>
-          <label class="dsh-settings-select-wrap">
-            <span class="dsh-settings-visually-hidden">{{ props.copy.languageTitle }}</span>
-            <select :value="settings.language" class="dsh-settings-select" :aria-label="props.copy.languageTitle" @change="handleLanguageChange">
+          <label class="omp-settings-select-wrap">
+            <span class="omp-settings-visually-hidden">{{ props.copy.languageTitle }}</span>
+            <select :value="settings.language" class="omp-settings-select" :aria-label="props.copy.languageTitle" @change="handleLanguageChange">
               <option v-for="option in props.copy.languageOptions" :key="option.value" :value="option.value">
                 {{ option.label }}
               </option>
@@ -87,17 +87,17 @@ function increaseFontSize() {
           </label>
         </div>
 
-        <div class="dsh-settings-row dsh-settings-row-stack">
-          <div class="dsh-settings-row-copy">
+        <div class="omp-settings-row omp-settings-row-stack">
+          <div class="omp-settings-row-copy">
             <strong>{{ props.copy.themeTitle }}</strong>
             <span>{{ props.copy.themeDescription }}</span>
           </div>
-          <div class="dsh-settings-choice-group" role="group" :aria-label="props.copy.themeTitle">
+          <div class="omp-settings-choice-group" role="group" :aria-label="props.copy.themeTitle">
             <button
               v-for="option in props.copy.themeOptions"
               :key="option.value"
-              class="dsh-settings-choice"
-              :class="{ 'dsh-settings-choice-active': settings.theme === option.value }"
+              class="omp-settings-choice"
+              :class="{ 'omp-settings-choice-active': settings.theme === option.value }"
               type="button"
               :aria-pressed="settings.theme === option.value"
               @click="setTheme(option.value)"
@@ -107,12 +107,12 @@ function increaseFontSize() {
           </div>
         </div>
 
-        <div class="dsh-settings-row">
-          <div class="dsh-settings-row-copy">
+        <div class="omp-settings-row">
+          <div class="omp-settings-row-copy">
             <strong>{{ props.copy.fontSizeTitle }}</strong>
             <span>{{ props.copy.fontSizeDescription }}</span>
           </div>
-          <div class="dsh-settings-stepper" :aria-label="props.copy.fontSizeTitle">
+          <div class="omp-settings-stepper" :aria-label="props.copy.fontSizeTitle">
             <button
               type="button"
               :aria-label="props.copy.decreaseFontSize"
@@ -133,17 +133,17 @@ function increaseFontSize() {
           </div>
         </div>
 
-        <div class="dsh-settings-row dsh-settings-row-stack">
-          <div class="dsh-settings-row-copy">
+        <div class="omp-settings-row omp-settings-row-stack">
+          <div class="omp-settings-row-copy">
             <strong>{{ props.copy.conversationTitle }}</strong>
             <span>{{ props.copy.conversationDescription }}</span>
           </div>
-          <div class="dsh-settings-choice-group" role="group" :aria-label="props.copy.conversationTitle">
+          <div class="omp-settings-choice-group" role="group" :aria-label="props.copy.conversationTitle">
             <button
               v-for="option in props.copy.conversationOptions"
               :key="option.value"
-              class="dsh-settings-choice"
-              :class="{ 'dsh-settings-choice-active': settings.conversationDensity === option.value }"
+              class="omp-settings-choice"
+              :class="{ 'omp-settings-choice-active': settings.conversationDensity === option.value }"
               type="button"
               :aria-pressed="settings.conversationDensity === option.value"
               @click="setConversationDensity(option.value)"
@@ -153,17 +153,17 @@ function increaseFontSize() {
           </div>
         </div>
 
-        <div class="dsh-settings-row dsh-settings-row-stack">
-          <div class="dsh-settings-row-copy">
+        <div class="omp-settings-row omp-settings-row-stack">
+          <div class="omp-settings-row-copy">
             <strong>{{ props.copy.busyTitle }}</strong>
             <span>{{ props.copy.busyDescription }}</span>
           </div>
-          <div class="dsh-settings-choice-group" role="group" :aria-label="props.copy.busyTitle">
+          <div class="omp-settings-choice-group" role="group" :aria-label="props.copy.busyTitle">
             <button
               v-for="option in props.copy.busyOptions"
               :key="option.value"
-              class="dsh-settings-choice"
-              :class="{ 'dsh-settings-choice-active': settings.busyBehavior === option.value }"
+              class="omp-settings-choice"
+              :class="{ 'omp-settings-choice-active': settings.busyBehavior === option.value }"
               type="button"
               :aria-pressed="settings.busyBehavior === option.value"
               @click="setBusyBehavior(option.value)"

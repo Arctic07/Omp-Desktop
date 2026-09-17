@@ -34,27 +34,27 @@ function saveConfiguration(pluginId: string) {
 </script>
 
 <template>
-  <div class="dsh-settings-stack">
-    <section class="dsh-settings-group" :aria-labelledby="'dsh-settings-plugins-list'">
-      <div class="dsh-settings-group-heading">
-        <h3 id="dsh-settings-plugins-list">{{ props.copy.title }}</h3>
+  <div class="omp-settings-stack">
+    <section class="omp-settings-group" :aria-labelledby="'omp-settings-plugins-list'">
+      <div class="omp-settings-group-heading">
+        <h3 id="omp-settings-plugins-list">{{ props.copy.title }}</h3>
         <p>{{ props.copy.description }}</p>
       </div>
-      <div class="dsh-settings-card dsh-settings-list-card">
-        <div v-for="plugin in props.copy.plugins" :key="plugin.id" class="dsh-settings-list-item">
-          <div class="dsh-settings-list-item-button dsh-settings-list-item-static">
-            <span class="dsh-settings-list-item-icon" aria-hidden="true">
+      <div class="omp-settings-card omp-settings-list-card">
+        <div v-for="plugin in props.copy.plugins" :key="plugin.id" class="omp-settings-list-item">
+          <div class="omp-settings-list-item-button omp-settings-list-item-static">
+            <span class="omp-settings-list-item-icon" aria-hidden="true">
               <AppIcon name="plug" :size="17" />
             </span>
-            <span class="dsh-settings-row-copy">
+            <span class="omp-settings-row-copy">
               <strong>{{ plugin.name }}</strong>
               <span>{{ plugin.description }}</span>
             </span>
           </div>
-          <div class="dsh-settings-list-item-actions">
+          <div class="omp-settings-list-item-actions">
             <button
-              class="dsh-settings-switch"
-              :class="{ 'dsh-settings-switch-off': !enabledPlugins.has(plugin.id) }"
+              class="omp-settings-switch"
+              :class="{ 'omp-settings-switch-off': !enabledPlugins.has(plugin.id) }"
               type="button"
               :aria-label="`${plugin.name}: ${enabledPlugins.has(plugin.id) ? props.copy.enabledLabel : props.copy.disabledLabel}`"
               :aria-pressed="enabledPlugins.has(plugin.id)"
@@ -63,7 +63,7 @@ function saveConfiguration(pluginId: string) {
               <span />
             </button>
             <button
-              class="dsh-settings-button dsh-settings-button-small"
+              class="omp-settings-button omp-settings-button-small"
               type="button"
               :aria-expanded="configurationPlugin === plugin.id"
               @click="toggleConfiguration(plugin.id)"
@@ -71,27 +71,27 @@ function saveConfiguration(pluginId: string) {
               {{ props.copy.configure }}
             </button>
           </div>
-          <div v-if="configurationPlugin === plugin.id" class="dsh-settings-inline-config">
-            <div class="dsh-settings-group-heading dsh-settings-inline-heading">
+          <div v-if="configurationPlugin === plugin.id" class="omp-settings-inline-config">
+            <div class="omp-settings-group-heading omp-settings-inline-heading">
               <h4>{{ props.copy.pluginSettingsTitle }}</h4>
               <p>{{ props.copy.pluginSettingsDescription }}</p>
             </div>
-            <label class="dsh-settings-input-label" :for="`dsh-settings-plugin-alias-${plugin.id}`">
+            <label class="omp-settings-input-label" :for="`omp-settings-plugin-alias-${plugin.id}`">
               {{ props.copy.pluginInputLabel }}
             </label>
-            <div class="dsh-settings-input-row">
+            <div class="omp-settings-input-row">
               <input
-                :id="`dsh-settings-plugin-alias-${plugin.id}`"
+                :id="`omp-settings-plugin-alias-${plugin.id}`"
                 v-model="workspaceAlias"
-                class="dsh-settings-input"
+                class="omp-settings-input"
                 type="text"
                 :placeholder="props.copy.pluginInputPlaceholder"
               />
-              <button class="dsh-settings-button dsh-settings-button-primary" type="button" @click="saveConfiguration(plugin.id)">
+              <button class="omp-settings-button omp-settings-button-primary" type="button" @click="saveConfiguration(plugin.id)">
                 {{ props.copy.save }}
               </button>
             </div>
-            <span v-if="savedPlugin === plugin.id" class="dsh-settings-inline-note">{{ props.copy.configured }}</span>
+            <span v-if="savedPlugin === plugin.id" class="omp-settings-inline-note">{{ props.copy.configured }}</span>
           </div>
         </div>
       </div>

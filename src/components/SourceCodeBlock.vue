@@ -87,20 +87,20 @@ watch(
 </script>
 
 <template>
-  <article class="dsh-source-code-block" data-code-block :data-language="props.language">
-    <header class="dsh-source-code-block-banner">
+  <article class="omp-source-code-block" data-code-block :data-language="props.language">
+    <header class="omp-source-code-block-banner">
       <span>{{ props.language }}</span>
       <button type="button" @click="copyCode">{{ copied ? props.copiedLabel : props.copyLabel }}</button>
     </header>
-    <div class="dsh-source-code-block-body">
-      <div v-if="highlightedCode" class="dsh-source-code-block-highlighted" v-html="highlightedCode" />
+    <div class="omp-source-code-block-body">
+      <div v-if="highlightedCode" class="omp-source-code-block-highlighted" v-html="highlightedCode" />
       <pre v-else><code>{{ props.code }}</code></pre>
     </div>
   </article>
 </template>
 
 <style scoped>
-.dsh-source-code-block {
+.omp-source-code-block {
   margin: 4px 0;
   overflow: hidden;
   border: 0.5px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
@@ -109,7 +109,7 @@ watch(
   color: var(--dsw-alias-label-primary);
 }
 
-.dsh-source-code-block-banner {
+.omp-source-code-block-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -117,17 +117,17 @@ watch(
   padding: 9px 14px;
   background: var(--dsw-alias-markdown-code-block-banner);
   color: var(--dsw-alias-label-primary);
-  font: 11px/18px var(--dsh-font-family);
+  font: 11px/18px var(--omp-font-family);
 }
 
-.dsh-source-code-block-banner span {
+.omp-source-code-block-banner span {
   overflow: hidden;
   font-family: var(--ds-font-family-code);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.dsh-source-code-block-banner button {
+.omp-source-code-block-banner button {
   flex: none;
   padding: 0;
   border: 0;
@@ -137,12 +137,12 @@ watch(
   cursor: pointer;
 }
 
-.dsh-source-code-block-banner button:hover {
+.omp-source-code-block-banner button:hover {
   color: var(--dsw-alias-label-primary);
 }
 
-.dsh-source-code-block-body :deep(pre),
-.dsh-source-code-block-body > pre {
+.omp-source-code-block-body :deep(pre),
+.omp-source-code-block-body > pre {
   box-sizing: border-box;
   max-height: 260px;
   margin: 0;
@@ -155,8 +155,8 @@ watch(
   word-break: break-word;
 }
 
-.dsh-source-code-block-body :deep(pre code),
-.dsh-source-code-block-body > pre code {
+.omp-source-code-block-body :deep(pre code),
+.omp-source-code-block-body > pre code {
   font: inherit;
 }
 </style>

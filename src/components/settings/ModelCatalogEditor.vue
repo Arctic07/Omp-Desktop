@@ -75,15 +75,15 @@ function toggleExpanded(index: number) {
 </script>
 
 <template>
-  <div class='dsh-model-catalog'>
-  <div class='dsh-model-catalog-heading'>
+  <div class='omp-model-catalog'>
+  <div class='omp-model-catalog-heading'>
     <div>
       <h4>{{ props.copy.modelCatalogTitle }}</h4>
       <p>{{ props.copy.modelCatalogDescription }}</p>
     </div>
-    <div class='dsh-model-catalog-heading-actions'>
+    <div class='omp-model-catalog-heading-actions'>
       <button
-        class='dsh-settings-button dsh-settings-button-small'
+        class='omp-settings-button omp-settings-button-small'
         type='button'
         :disabled='props.fetching'
         @click='emit("restoreDefaults")'
@@ -92,7 +92,7 @@ function toggleExpanded(index: number) {
         {{ props.copy.restoreDefaultModels }}
       </button>
       <button
-        class='dsh-settings-button dsh-settings-button-small dsh-settings-button-primary'
+        class='omp-settings-button omp-settings-button-small omp-settings-button-primary'
         type='button'
         :disabled='props.fetching'
         @click='emit("fetch")'
@@ -103,20 +103,20 @@ function toggleExpanded(index: number) {
     </div>
   </div>
 
-    <p v-if='props.fetchError' class='dsh-model-catalog-feedback dsh-model-catalog-feedback-error' role='alert'>
+    <p v-if='props.fetchError' class='omp-model-catalog-feedback omp-model-catalog-feedback-error' role='alert'>
       {{ props.fetchError }}
     </p>
-    <p v-if='props.validationError' class='dsh-model-catalog-feedback dsh-model-catalog-feedback-error' role='alert'>
+    <p v-if='props.validationError' class='omp-model-catalog-feedback omp-model-catalog-feedback-error' role='alert'>
       {{ props.validationError }}
     </p>
 
-    <div v-if='props.models.length > 0' class='dsh-model-catalog-list'>
-      <article v-for='(model, index) in props.models' :key='`${index}-${model.id}`' class='dsh-model-row'>
-        <div class='dsh-model-row-main'>
-          <label class='dsh-model-field'>
+    <div v-if='props.models.length > 0' class='omp-model-catalog-list'>
+      <article v-for='(model, index) in props.models' :key='`${index}-${model.id}`' class='omp-model-row'>
+        <div class='omp-model-row-main'>
+          <label class='omp-model-field'>
             <span>{{ props.copy.modelIdLabel }}</span>
             <input
-              class='dsh-settings-input'
+              class='omp-settings-input'
               type='text'
               :value='model.id'
               :placeholder='props.copy.manualModelIdPlaceholder'
@@ -124,10 +124,10 @@ function toggleExpanded(index: number) {
               @input='updateModel(index, "id", inputValue($event))'
             />
           </label>
-          <label class='dsh-model-field'>
+          <label class='omp-model-field'>
             <span>{{ props.copy.modelNameLabel }}</span>
             <input
-              class='dsh-settings-input'
+              class='omp-settings-input'
               type='text'
               :value='model.name ?? ""'
               :placeholder='props.copy.manualModelNamePlaceholder'
@@ -135,9 +135,9 @@ function toggleExpanded(index: number) {
               @input='updateModel(index, "name", inputValue($event))'
             />
           </label>
-          <div class='dsh-model-row-actions'>
+          <div class='omp-model-row-actions'>
             <button
-              class='dsh-model-expand-button'
+              class='omp-model-expand-button'
               type='button'
               :aria-expanded='expandedRows.has(index)'
               :aria-label='expandedRows.has(index) ? props.copy.collapseModel : props.copy.expandModel'
@@ -146,7 +146,7 @@ function toggleExpanded(index: number) {
               <AppIcon name='chevron-down' :size='16' aria-hidden='true' />
             </button>
             <button
-              class='dsh-model-remove-button'
+              class='omp-model-remove-button'
               type='button'
               :aria-label='props.copy.removeModel'
               @click='removeModel(index)'
@@ -155,11 +155,11 @@ function toggleExpanded(index: number) {
             </button>
           </div>
         </div>
-        <div v-if='expandedRows.has(index)' class='dsh-model-row-details'>
-          <label class='dsh-model-field dsh-model-field-capacity'>
+        <div v-if='expandedRows.has(index)' class='omp-model-row-details'>
+          <label class='omp-model-field omp-model-field-capacity'>
             <span>{{ props.copy.modelCapacityLabel }}</span>
             <input
-              class='dsh-settings-input'
+              class='omp-settings-input'
               type='text'
               :value='model.capacity ?? ""'
               :placeholder='props.copy.modelCapacityPlaceholder'
@@ -170,9 +170,9 @@ function toggleExpanded(index: number) {
         </div>
       </article>
     </div>
-    <p v-else class='dsh-model-catalog-empty'>{{ props.copy.modelsEmpty }}</p>
+    <p v-else class='omp-model-catalog-empty'>{{ props.copy.modelsEmpty }}</p>
 
-    <button class='dsh-model-add-button' type='button' @click='emit("add")'>
+    <button class='omp-model-add-button' type='button' @click='emit("add")'>
       <AppIcon name='plus' :size='15' aria-hidden='true' />
       {{ props.copy.addModel }}
     </button>

@@ -1,0 +1,303 @@
+.omp-conversation-feed {
+  flex: 0 0 auto;
+  width: min(var(--omp-chat-content-width), calc(100% - 32px));
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0 0 16px;
+}
+
+.omp-conversation-feed-list {
+  position: relative;
+  min-width: 0;
+  overflow-anchor: none;
+}
+
+.omp-conversation-feed-spacer {
+  position: relative;
+  width: 100%;
+  height: var(--omp-feed-total-size);
+}
+
+.omp-conversation-feed-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-width: 0;
+  height: var(--omp-feed-row-height);
+  transform: translateY(var(--omp-feed-row-offset));
+}
+
+.omp-conversation-feed-row > .omp-feed-message,
+.omp-conversation-feed-row > .omp-feed-tool,
+.omp-conversation-feed-row > .omp-feed-tool-group {
+  padding-bottom: 16px;
+}
+
+.omp-conversation-feed-row-last > .omp-feed-message,
+.omp-conversation-feed-row-last > .omp-feed-tool,
+.omp-conversation-feed-row-last > .omp-feed-tool-group {
+  padding-bottom: 0;
+}
+
+.omp-feed-message {
+  min-width: 0;
+}
+
+.omp-feed-message-user {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.omp-feed-user-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+  max-width: min(calc(var(--omp-chat-content-width) * 0.702), 82%);
+}
+
+.omp-feed-attachment-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 220px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omp-feed-attachment-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.omp-feed-attachment-copy strong {
+  overflow: hidden;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.omp-feed-attachment-copy small {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.omp-feed-attachment-action {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.omp-feed-attachment-action:hover {
+  background: var(--dsw-alias-interactive-bg-hover-solid);
+}
+
+.omp-feed-message-bubble {
+  max-width: 100%;
+  padding: 10px 16px;
+  border-radius: 22px;
+  background: var(--dsw-specific-bubble);
+  color: var(--dsw-alias-label-primary);
+  font-size: var(--omp-content-font-size, 14px);
+  line-height: 22px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.omp-feed-message-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.omp-feed-message-assistant {
+  display: block;
+}
+
+.omp-feed-message-copy {
+  min-width: 0;
+  color: var(--dsw-alias-label-primary);
+  font-size: var(--omp-content-font-size, 14px);
+  line-height: 24px;
+}
+
+.omp-feed-message-copy p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.omp-feed-tool-group {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 24px;
+  gap: 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 24px;
+}
+
+.omp-feed-tool-group-label {
+  flex: none;
+}
+
+.omp-feed-tool-group-line {
+  flex: 1;
+  height: 0.5px;
+  background: var(--dsw-alias-border-l2);
+}
+
+.omp-feed-tool {
+  min-width: 0;
+  color: var(--dsw-alias-label-primary);
+}
+
+.omp-feed-tool summary {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 24px;
+  gap: 6px;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.omp-feed-tool summary::-webkit-details-marker {
+  display: none;
+}
+
+.omp-feed-tool-leading {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omp-feed-tool-icon,
+.omp-feed-tool-chevron {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 14px;
+  height: 14px;
+  transition: color var(--dsw-transition-fast), opacity var(--dsw-transition-fast), transform var(--dsw-transition-fast);
+}
+
+.omp-feed-tool-icon {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omp-feed-tool-chevron {
+  color: var(--dsw-alias-label-secondary);
+  opacity: 0;
+}
+
+.omp-feed-tool:hover .omp-feed-tool-icon,
+.omp-feed-tool[open] .omp-feed-tool-icon {
+  opacity: 0;
+}
+
+.omp-feed-tool:hover .omp-feed-tool-chevron,
+.omp-feed-tool[open] .omp-feed-tool-chevron {
+  opacity: 1;
+}
+
+.omp-feed-tool[open] .omp-feed-tool-chevron {
+  transform: rotate(90deg);
+}
+
+.omp-feed-tool-error .omp-feed-tool-icon {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+
+.omp-feed-tool-running summary {
+  position: relative;
+  overflow: hidden;
+}
+
+.omp-feed-tool-running summary::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -300px;
+  width: 300px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--dsw-alias-bg-base) 60%, transparent), transparent);
+  content: '';
+  animation: omp-feed-tool-sweep 2.6s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes omp-feed-tool-sweep {
+  0% { left: -300px; }
+  90%, 100% { left: 100%; }
+}
+
+.omp-feed-tool-error .omp-feed-tool-state {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.omp-feed-tool strong {
+  flex: none;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.omp-feed-tool-separator {
+  flex: none;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-caption);
+}
+
+.omp-feed-tool-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.omp-feed-tool-state {
+  flex: none;
+  margin-left: auto;
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omp-feed-tool-running summary::after {
+    animation: none;
+  }
+}

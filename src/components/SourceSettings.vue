@@ -26,11 +26,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="dsh-settings" :aria-label="copy.settingsTitle">
-    <aside class="dsh-settings-nav">
-      <div class="dsh-settings-heading-row">
+  <section class="omp-settings" :aria-label="copy.settingsTitle">
+    <aside class="omp-settings-nav">
+      <div class="omp-settings-heading-row">
         <h1>{{ copy.settingsTitle }}</h1>
-        <button class="dsh-settings-close" type="button" :aria-label="copy.closeSettings" @click="emit('close')">
+        <button class="omp-settings-close" type="button" :aria-label="copy.closeSettings" @click="emit('close')">
           <AppIcon name="x" :size="18" />
         </button>
       </div>
@@ -38,8 +38,8 @@ const emit = defineEmits<{
         <button
           v-for="section in navigation"
           :key="section.id"
-          class="dsh-settings-nav-item"
-          :class="{ 'dsh-settings-nav-item-active': activeSection === section.id }"
+          class="omp-settings-nav-item"
+          :class="{ 'omp-settings-nav-item-active': activeSection === section.id }"
           type="button"
           :aria-current="activeSection === section.id ? 'page' : undefined"
           @click="activeSection = section.id"
@@ -48,12 +48,12 @@ const emit = defineEmits<{
         </button>
       </nav>
     </aside>
-    <div class="dsh-settings-content">
-      <div class="dsh-settings-content-inner">
-        <p class="dsh-settings-kicker">{{ copy.settingsTitle }}</p>
+    <div class="omp-settings-content">
+      <div class="omp-settings-content-inner">
+        <p class="omp-settings-kicker">{{ copy.settingsTitle }}</p>
         <template v-if="activeNavigationItem">
           <h2>{{ activeNavigationItem.label }}</h2>
-          <p class="dsh-settings-description">
+          <p class="omp-settings-description">
             {{ copy.settingsPage.sectionDescriptions[activeSection] }}
           </p>
         </template>

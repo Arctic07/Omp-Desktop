@@ -27,24 +27,24 @@ function toggleRestoreLast() {
 </script>
 
 <template>
-  <div class="dsh-settings-stack">
-    <section class="dsh-settings-group" :aria-labelledby="'dsh-settings-sessions-behavior'">
-      <div class="dsh-settings-group-heading">
-        <h3 id="dsh-settings-sessions-behavior">{{ props.copy.behaviorTitle }}</h3>
+  <div class="omp-settings-stack">
+    <section class="omp-settings-group" :aria-labelledby="'omp-settings-sessions-behavior'">
+      <div class="omp-settings-group-heading">
+        <h3 id="omp-settings-sessions-behavior">{{ props.copy.behaviorTitle }}</h3>
         <p>{{ props.copy.behaviorDescription }}</p>
       </div>
-      <div class="dsh-settings-card">
-        <div class="dsh-settings-row">
-          <div class="dsh-settings-row-copy dsh-settings-row-copy-with-icon">
-            <span class="dsh-settings-row-icon" aria-hidden="true"><AppIcon name="archive" :size="16" /></span>
+      <div class="omp-settings-card">
+        <div class="omp-settings-row">
+          <div class="omp-settings-row-copy omp-settings-row-copy-with-icon">
+            <span class="omp-settings-row-icon" aria-hidden="true"><AppIcon name="archive" :size="16" /></span>
             <span>
               <strong>{{ props.copy.autoArchiveTitle }}</strong>
               <span>{{ props.copy.autoArchiveDescription }}</span>
             </span>
           </div>
           <button
-            class="dsh-settings-switch"
-            :class="{ 'dsh-settings-switch-off': !autoArchive }"
+            class="omp-settings-switch"
+            :class="{ 'omp-settings-switch-off': !autoArchive }"
             type="button"
             :aria-label="`${props.copy.autoArchiveTitle}: ${autoArchive ? props.copy.enabledLabel : props.copy.disabledLabel}`"
             :aria-pressed="autoArchive"
@@ -53,17 +53,17 @@ function toggleRestoreLast() {
             <span />
           </button>
         </div>
-        <div class="dsh-settings-row">
-          <div class="dsh-settings-row-copy dsh-settings-row-copy-with-icon">
-            <span class="dsh-settings-row-icon" aria-hidden="true"><AppIcon name="trash-2" :size="16" /></span>
+        <div class="omp-settings-row">
+          <div class="omp-settings-row-copy omp-settings-row-copy-with-icon">
+            <span class="omp-settings-row-icon" aria-hidden="true"><AppIcon name="trash-2" :size="16" /></span>
             <span>
               <strong>{{ props.copy.confirmDeleteTitle }}</strong>
               <span>{{ props.copy.confirmDeleteDescription }}</span>
             </span>
           </div>
           <button
-            class="dsh-settings-switch"
-            :class="{ 'dsh-settings-switch-off': !confirmDelete }"
+            class="omp-settings-switch"
+            :class="{ 'omp-settings-switch-off': !confirmDelete }"
             type="button"
             :aria-label="`${props.copy.confirmDeleteTitle}: ${confirmDelete ? props.copy.enabledLabel : props.copy.disabledLabel}`"
             :aria-pressed="confirmDelete"
@@ -72,17 +72,17 @@ function toggleRestoreLast() {
             <span />
           </button>
         </div>
-        <div class="dsh-settings-row">
-          <div class="dsh-settings-row-copy dsh-settings-row-copy-with-icon">
-            <span class="dsh-settings-row-icon" aria-hidden="true"><AppIcon name="rotate-cw" :size="16" /></span>
+        <div class="omp-settings-row">
+          <div class="omp-settings-row-copy omp-settings-row-copy-with-icon">
+            <span class="omp-settings-row-icon" aria-hidden="true"><AppIcon name="rotate-cw" :size="16" /></span>
             <span>
               <strong>{{ props.copy.restoreTitle }}</strong>
               <span>{{ props.copy.restoreDescription }}</span>
             </span>
           </div>
           <button
-            class="dsh-settings-switch"
-            :class="{ 'dsh-settings-switch-off': !restoreLast }"
+            class="omp-settings-switch"
+            :class="{ 'omp-settings-switch-off': !restoreLast }"
             type="button"
             :aria-label="`${props.copy.restoreTitle}: ${restoreLast ? props.copy.enabledLabel : props.copy.disabledLabel}`"
             :aria-pressed="restoreLast"
@@ -91,14 +91,14 @@ function toggleRestoreLast() {
             <span />
           </button>
         </div>
-        <div class="dsh-settings-row">
-          <div class="dsh-settings-row-copy">
+        <div class="omp-settings-row">
+          <div class="omp-settings-row-copy">
             <strong>{{ props.copy.retentionTitle }}</strong>
             <span>{{ props.copy.retentionDescription }}</span>
           </div>
-          <label class="dsh-settings-select-wrap">
-            <span class="dsh-settings-visually-hidden">{{ props.copy.retentionTitle }}</span>
-            <select v-model="retention" class="dsh-settings-select" :aria-label="props.copy.retentionTitle">
+          <label class="omp-settings-select-wrap">
+            <span class="omp-settings-visually-hidden">{{ props.copy.retentionTitle }}</span>
+            <select v-model="retention" class="omp-settings-select" :aria-label="props.copy.retentionTitle">
               <option v-for="option in props.copy.retentionOptions" :key="option.value" :value="option.value">
                 {{ option.label }}
               </option>

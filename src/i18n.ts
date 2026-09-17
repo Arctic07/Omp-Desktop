@@ -595,7 +595,7 @@ const en: SourceCopy = {
     },
     about: {
       title: 'About',
-      description: 'A quick look at this local DSH desktop build.',
+      description: 'A quick look at this local OMP desktop build.',
       versionTitle: 'Version',
       versionValue: '0.1.0',
       buildTitle: 'Build',
@@ -923,7 +923,7 @@ const zh: SourceCopy = {
     },
     about: {
       title: '关于',
-      description: '查看这个本地 DSH 桌面构建的信息。',
+      description: '查看这个本地 OMP 桌面构建的信息。',
       versionTitle: '版本',
       versionValue: '0.1.0',
       buildTitle: '构建类型',

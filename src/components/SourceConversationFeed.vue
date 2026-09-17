@@ -69,7 +69,7 @@ const entries: readonly FeedEntry[] = [
     role: 'tool',
     icon: 'cloud-download',
     title: '上下文注入',
-    summary: '@deepseek-ai/dsh-system-prompt',
+    summary: '@deepseek-ai/omp-system-prompt',
     state: 'success',
     kind: 'terminal',
     body: 'System prompt loaded',
@@ -97,7 +97,7 @@ const entries: readonly FeedEntry[] = [
     state: 'success',
     kind: 'code',
     language: 'json',
-    body: '{\n  "name": "@deepseek-ai/dsh-web-frontend",\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build"\n  }\n}',
+    body: '{\n  "name": "@deepseek-ai/omp-web-frontend",\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build"\n  }\n}',
   },
   {
     id: 'tool-read-error',
@@ -262,40 +262,40 @@ watch(() => props.scrollElement, (element) => {
 </script>
 
 <template>
-  <section class="dsh-conversation-feed" aria-label="Conversation stream">
-    <div class="dsh-conversation-feed-list">
+  <section class="omp-conversation-feed" aria-label="Conversation stream">
+    <div class="omp-conversation-feed-list">
       <div
-        class="dsh-conversation-feed-spacer"
-        :style="{ '--dsh-feed-total-size': `${totalSize}px` }"
+        class="omp-conversation-feed-spacer"
+        :style="{ '--omp-feed-total-size': `${totalSize}px` }"
       >
         <div
           v-for="virtualRow in virtualRows"
           :key="virtualRow.key"
-          class="dsh-conversation-feed-row"
-          :class="{ 'dsh-conversation-feed-row-last': virtualRow.index === entries.length - 1 }"
+          class="omp-conversation-feed-row"
+          :class="{ 'omp-conversation-feed-row-last': virtualRow.index === entries.length - 1 }"
           :data-index="virtualRow.index"
           :style="{
-            '--dsh-feed-row-offset': `${virtualRow.start}px`,
-            '--dsh-feed-row-height': `${virtualRow.size}px`,
+            '--omp-feed-row-offset': `${virtualRow.start}px`,
+            '--omp-feed-row-height': `${virtualRow.size}px`,
           }"
         >
           <article
             v-if="virtualRow.entry.role === 'user'"
-            class="dsh-feed-message dsh-feed-message-user"
+            class="omp-feed-message omp-feed-message-user"
             :data-index="virtualRow.index"
             :ref="virtualizer.measureElement"
           >
-            <div class="dsh-feed-user-stack">
-              <div v-if="virtualRow.entry.attachment" class="dsh-feed-attachment-card">
+            <div class="omp-feed-user-stack">
+              <div v-if="virtualRow.entry.attachment" class="omp-feed-attachment-card">
                 <AppIcon name="file-text" :size="18" />
-                <span class="dsh-feed-attachment-copy">
+                <span class="omp-feed-attachment-copy">
                   <strong>{{ virtualRow.entry.attachment.name }}</strong>
                   <small>{{ virtualRow.entry.attachment.meta }}</small>
                 </span>
               </div>
-              <button v-if="virtualRow.entry.attachment" class="dsh-feed-attachment-action" type="button">查看文件</button>
-              <div class="dsh-feed-message-bubble">{{ virtualRow.entry.text }}</div>
-              <div class="dsh-feed-message-meta">
+              <button v-if="virtualRow.entry.attachment" class="omp-feed-attachment-action" type="button">查看文件</button>
+              <div class="omp-feed-message-bubble">{{ virtualRow.entry.text }}</div>
+              <div class="omp-feed-message-meta">
                 <span>刚刚</span>
                 <AppIcon name="copy" :size="14" />
               </div>
@@ -303,42 +303,42 @@ watch(() => props.scrollElement, (element) => {
           </article>
           <article
             v-else-if="virtualRow.entry.role === 'assistant'"
-            class="dsh-feed-message dsh-feed-message-assistant"
+            class="omp-feed-message omp-feed-message-assistant"
             :data-index="virtualRow.index"
             :ref="virtualizer.measureElement"
           >
-            <div class="dsh-feed-message-copy">
+            <div class="omp-feed-message-copy">
               <p>{{ virtualRow.entry.text }}</p>
             </div>
           </article>
           <section
             v-else-if="virtualRow.entry.role === 'tool-group'"
-            class="dsh-feed-tool-group"
+            class="omp-feed-tool-group"
             :data-index="virtualRow.index"
             :ref="virtualizer.measureElement"
           >
             <AppIcon name="chevron-down" :size="14" aria-hidden="true" />
-            <span class="dsh-feed-tool-group-label">{{ virtualRow.entry.label }}</span>
-            <span class="dsh-feed-tool-group-line" aria-hidden="true" />
+            <span class="omp-feed-tool-group-label">{{ virtualRow.entry.label }}</span>
+            <span class="omp-feed-tool-group-line" aria-hidden="true" />
           </section>
           <details
             v-else
-            class="dsh-feed-tool"
+            class="omp-feed-tool"
             :data-index="virtualRow.index"
-            :class="{ 'dsh-feed-tool-running': virtualRow.entry.state === 'running', 'dsh-feed-tool-error': virtualRow.entry.state === 'error' }"
+            :class="{ 'omp-feed-tool-running': virtualRow.entry.state === 'running', 'omp-feed-tool-error': virtualRow.entry.state === 'error' }"
             :open="openToolIds.has(virtualRow.entry.id)"
             @toggle="updateToolOpenState(virtualRow.entry.id, $event)"
             :ref="virtualizer.measureElement"
           >
             <summary>
-              <span class="dsh-feed-tool-leading" aria-hidden="true">
-                <AppIcon name="chevron-right" class="dsh-feed-tool-chevron" :size="14" aria-hidden="true" />
-                <AppIcon :name="virtualRow.entry.icon" class="dsh-feed-tool-icon" :size="14" />
+              <span class="omp-feed-tool-leading" aria-hidden="true">
+                <AppIcon name="chevron-right" class="omp-feed-tool-chevron" :size="14" aria-hidden="true" />
+                <AppIcon :name="virtualRow.entry.icon" class="omp-feed-tool-icon" :size="14" />
               </span>
               <strong>{{ virtualRow.entry.title }}</strong>
-              <span class="dsh-feed-tool-separator" aria-hidden="true" />
-              <span class="dsh-feed-tool-summary">{{ virtualRow.entry.summary }}</span>
-              <span class="dsh-feed-tool-state">{{ toolStateLabel(virtualRow.entry.state) }}</span>
+              <span class="omp-feed-tool-separator" aria-hidden="true" />
+              <span class="omp-feed-tool-summary">{{ virtualRow.entry.summary }}</span>
+              <span class="omp-feed-tool-state">{{ toolStateLabel(virtualRow.entry.state) }}</span>
             </summary>
             <SourceCodeBlock
               v-if="virtualRow.entry.kind === 'code'"

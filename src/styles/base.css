@@ -1,0 +1,72 @@
+* {
+  box-sizing: border-box;
+  corner-shape: superellipse(1.5);
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  overflow: hidden;
+  font-family: var(--omp-font-family);
+  font-size: 14px;
+  line-height: 22px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+[contenteditable='true']:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: var(--omp-scrollbar-width, 8px);
+  height: var(--omp-scrollbar-width, 8px);
+}
+
+::-webkit-scrollbar-track {
+  margin-block: var(--omp-scrollbar-track-margin, 0px);
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: var(--omp-scrollbar-thumb-border, 2px) solid transparent;
+  border-radius: 999px;
+  background: var(--omp-scrollbar-thumb);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--omp-scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  body,
+  body * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--omp-scrollbar-thumb) transparent;
+  }
+}

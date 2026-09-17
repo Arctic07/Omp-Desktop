@@ -29,16 +29,16 @@ const sessionTitles: Record<string, string> = {
 const title = computed(() => sessionTitles[props.sessionId] ?? '本地开发会话')
 </script>
 <template>
-  <header class="dsh-conversation-header">
-    <div class="dsh-conversation-header-main">
-      <div class="dsh-conversation-header-title-row">
-        <button class="dsh-conversation-header-title" type="button" disabled>{{ title }}</button>
-        <span class="dsh-conversation-header-mode">{{ copy.conversationMode }}</span>
+  <header class="omp-conversation-header">
+    <div class="omp-conversation-header-main">
+      <div class="omp-conversation-header-title-row">
+        <button class="omp-conversation-header-title" type="button" disabled>{{ title }}</button>
+        <span class="omp-conversation-header-mode">{{ copy.conversationMode }}</span>
       </div>
-      <div class="dsh-conversation-header-tabs" role="tablist">
+      <div class="omp-conversation-header-tabs" role="tablist">
         <button
-          class="dsh-conversation-header-tab"
-          :class="{ 'dsh-conversation-header-tab-active': activeTab === 'conversation' }"
+          class="omp-conversation-header-tab"
+          :class="{ 'omp-conversation-header-tab-active': activeTab === 'conversation' }"
           type="button"
           role="tab"
           :aria-selected="activeTab === 'conversation'"
@@ -47,8 +47,8 @@ const title = computed(() => sessionTitles[props.sessionId] ?? '本地开发会�
           {{ copy.conversationTab }}
         </button>
         <button
-          class="dsh-conversation-header-tab"
-          :class="{ 'dsh-conversation-header-tab-active': activeTab === 'trajectory' }"
+          class="omp-conversation-header-tab"
+          :class="{ 'omp-conversation-header-tab-active': activeTab === 'trajectory' }"
           type="button"
           role="tab"
           :aria-selected="activeTab === 'trajectory'"
@@ -58,15 +58,15 @@ const title = computed(() => sessionTitles[props.sessionId] ?? '本地开发会�
         </button>
       </div>
     </div>
-    <div class="dsh-conversation-header-actions">
-      <button class="dsh-conversation-header-action dsh-conversation-header-workspace" type="button" :aria-label="copy.openWorkspace">
+    <div class="omp-conversation-header-actions">
+      <button class="omp-conversation-header-action omp-conversation-header-workspace" type="button" :aria-label="copy.openWorkspace">
         <AppIcon name="folder" :size="15" />
         <AppIcon name="chevron-down" :size="12" />
       </button>
-      <button class="dsh-conversation-header-action" type="button" :aria-label="copy.openMoreActions">
+      <button class="omp-conversation-header-action" type="button" :aria-label="copy.openMoreActions">
         <AppIcon name="more-horizontal" :size="16" />
       </button>
-      <button class="dsh-conversation-header-action" type="button" :aria-label="copy.openRightPanel">
+      <button class="omp-conversation-header-action" type="button" :aria-label="copy.openRightPanel">
         <AppIcon name="panel-right" :size="16" />
       </button>
     </div>

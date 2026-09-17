@@ -190,44 +190,44 @@ function addWorkspace() {
 </script>
 
 <template>
-  <aside class="dsh-sidebar" :class="{ 'dsh-sidebar-collapsed': props.collapsed }">
-    <div class="dsh-sidebar-logo-row">
+  <aside class="omp-sidebar" :class="{ 'omp-sidebar-collapsed': props.collapsed }">
+    <div class="omp-sidebar-logo-row">
       <button
         v-if="!props.collapsed"
-        class="dsh-sidebar-brand"
+        class="omp-sidebar-brand"
         type="button"
         :aria-label="copy.newSessionLabel"
         @click="startSession"
       >
-        <span class="dsh-sidebar-brand-identity" aria-hidden="true">
-          <FishLogo class="dsh-sidebar-brand-mark" :size="24" />
-          <span class="dsh-sidebar-brand-name">{{ copy.brand }}</span>
+        <span class="omp-sidebar-brand-identity" aria-hidden="true">
+          <FishLogo class="omp-sidebar-brand-mark" :size="24" />
+          <span class="omp-sidebar-brand-name">{{ copy.brand }}</span>
         </span>
       </button>
       <button
-        class="dsh-sidebar-icon-button dsh-sidebar-toggle"
+        class="omp-sidebar-icon-button omp-sidebar-toggle"
         type="button"
         :aria-label="props.collapsed ? copy.openSidebar : copy.collapseSidebar"
         @click="emit('toggle')"
       >
-        <FishLogo v-if="props.collapsed" class="dsh-sidebar-rail-mark" :size="24" />
+        <FishLogo v-if="props.collapsed" class="omp-sidebar-rail-mark" :size="24" />
         <AppIcon v-else name="panel-left" :size="16" />
       </button>
     </div>
 
-    <button class="dsh-sidebar-new-session" type="button" @click="startSession">
+    <button class="omp-sidebar-new-session" type="button" @click="startSession">
       <AppIcon name="plus" :size="props.collapsed ? 18 : 14" />
       <span v-if="!props.collapsed">{{ copy.newSession }}</span>
     </button>
 
-    <div class="dsh-sidebar-region">
-      <section class="dsh-workspace-browser" :class="{ 'dsh-workspace-browser-rail': props.collapsed }">
-        <div v-if="!props.collapsed" class="dsh-workspace-header">
-          <span v-if="!searchExpanded" class="dsh-workspace-section-label">{{ copy.workspaces }}</span>
-          <div class="dsh-workspace-search-slot" :class="{ 'dsh-workspace-search-slot-expanded': searchExpanded }">
-            <div class="dsh-workspace-search" :class="{ 'dsh-workspace-search-expanded': searchExpanded }">
+    <div class="omp-sidebar-region">
+      <section class="omp-workspace-browser" :class="{ 'omp-workspace-browser-rail': props.collapsed }">
+        <div v-if="!props.collapsed" class="omp-workspace-header">
+          <span v-if="!searchExpanded" class="omp-workspace-section-label">{{ copy.workspaces }}</span>
+          <div class="omp-workspace-search-slot" :class="{ 'omp-workspace-search-slot-expanded': searchExpanded }">
+            <div class="omp-workspace-search" :class="{ 'omp-workspace-search-expanded': searchExpanded }">
               <button
-                class="dsh-workspace-search-button"
+                class="omp-workspace-search-button"
                 type="button"
                 :aria-label="copy.searchSessions"
                 :aria-expanded="searchExpanded"
@@ -239,7 +239,7 @@ function addWorkspace() {
                 v-if="searchExpanded"
                 ref="searchInput"
                 v-model="query"
-                class="dsh-workspace-search-input"
+                class="omp-workspace-search-input"
                 type="search"
                 :placeholder="`${copy.searchSessions}...`"
                 :aria-label="copy.searchSessions"
@@ -247,7 +247,7 @@ function addWorkspace() {
               />
               <button
                 v-if="searchExpanded"
-                class="dsh-workspace-search-clear"
+                class="omp-workspace-search-clear"
                 type="button"
                 :aria-label="copy.clearSearch"
                 @click="closeSearch"
@@ -256,35 +256,35 @@ function addWorkspace() {
               </button>
             </div>
           </div>
-          <div class="dsh-workspace-header-actions" :class="{ 'dsh-workspace-header-actions-hidden': searchExpanded }">
-            <button class="dsh-workspace-icon-button" type="button" :aria-label="copy.viewOptions">
+          <div class="omp-workspace-header-actions" :class="{ 'omp-workspace-header-actions-hidden': searchExpanded }">
+            <button class="omp-workspace-icon-button" type="button" :aria-label="copy.viewOptions">
               <AppIcon name="sliders-horizontal" :size="16" />
             </button>
-            <button class="dsh-workspace-icon-button" type="button" :aria-label="copy.addWorkspace" @click="workspaceMenuOpen = !workspaceMenuOpen">
+            <button class="omp-workspace-icon-button" type="button" :aria-label="copy.addWorkspace" @click="workspaceMenuOpen = !workspaceMenuOpen">
               <AppIcon name="folder-plus" :size="16" />
             </button>
           </div>
-          <div v-if="workspaceMenuOpen" class="dsh-workspace-menu" role="menu">
+          <div v-if="workspaceMenuOpen" class="omp-workspace-menu" role="menu">
             <button type="button" role="menuitem" @click="addWorkspace">{{ copy.addWorkspaceMenu }}</button>
           </div>
         </div>
 
-        <div v-else class="dsh-workspace-rail-search">
-          <button class="dsh-workspace-search-button" type="button" :aria-label="copy.searchSessions" @click="expandSearch">
+        <div v-else class="omp-workspace-rail-search">
+          <button class="omp-workspace-search-button" type="button" :aria-label="copy.searchSessions" @click="expandSearch">
             <AppIcon name="search" :size="18" />
           </button>
         </div>
 
-        <div class="dsh-workspace-list" :class="{ 'dsh-workspace-list-quiet': !hasVisibleSessions }">
+        <div class="omp-workspace-list" :class="{ 'omp-workspace-list-quiet': !hasVisibleSessions }">
           <template v-if="hasVisibleSessions">
             <section
               v-for="project in visibleProjects"
               :key="project.id"
-              class="dsh-workspace-project"
+              class="omp-workspace-project"
             >
               <div
-                class="dsh-workspace-project-row"
-                :class="{ 'dsh-workspace-project-row-menu-open': projectMenuOpenId === project.id, 'dsh-workspace-project-row-active': isProjectActive(project) }"
+                class="omp-workspace-project-row"
+                :class="{ 'omp-workspace-project-row-menu-open': projectMenuOpenId === project.id, 'omp-workspace-project-row-active': isProjectActive(project) }"
                 role="treeitem"
                 :aria-expanded="isProjectExpanded(project.id)"
                 @mouseenter="showProjectHover(project.id, $event)"
@@ -292,25 +292,25 @@ function addWorkspace() {
                 @click="toggleProject(project.id)"
               >
                 <button
-                  class="dsh-workspace-project-toggle"
+                  class="omp-workspace-project-toggle"
                   type="button"
                   :aria-expanded="isProjectExpanded(project.id)"
                   @click.stop="toggleProject(project.id)"
                 >
-                  <span class="dsh-workspace-project-leading" aria-hidden="true">
-                    <AppIcon :name="isProjectExpanded(project.id) ? 'folder-open' : 'folder'" class="dsh-workspace-project-folder" :size="15" />
+                  <span class="omp-workspace-project-leading" aria-hidden="true">
+                    <AppIcon :name="isProjectExpanded(project.id) ? 'folder-open' : 'folder'" class="omp-workspace-project-folder" :size="15" />
                     <AppIcon
                       name="chevron-right"
                       :size="13"
-                      class="dsh-workspace-project-chevron"
-                      :class="{ 'dsh-workspace-project-chevron-open': isProjectExpanded(project.id) }"
+                      class="omp-workspace-project-chevron"
+                      :class="{ 'omp-workspace-project-chevron-open': isProjectExpanded(project.id) }"
                     />
                   </span>
-                  <span class="dsh-workspace-project-name">{{ project.name }}</span>
+                  <span class="omp-workspace-project-name">{{ project.name }}</span>
                 </button>
-                <div class="dsh-workspace-project-actions">
+                <div class="omp-workspace-project-actions">
                   <button
-                    class="dsh-workspace-project-action"
+                    class="omp-workspace-project-action"
                     type="button"
                     :aria-label="`${copy.openMoreActions}: ${project.name}`"
                     @click.stop="toggleProjectMenu(project.id)"
@@ -318,7 +318,7 @@ function addWorkspace() {
                     <AppIcon name="more-horizontal" :size="15" />
                   </button>
                   <button
-                    class="dsh-workspace-project-action"
+                    class="omp-workspace-project-action"
                     type="button"
                     :aria-label="`${copy.newSessionLabel}: ${project.name}`"
                     @click.stop="startSession"
@@ -326,14 +326,14 @@ function addWorkspace() {
                     <AppIcon name="plus" :size="15" />
                   </button>
                 </div>
-                <div v-if="projectMenuOpenId === project.id" class="dsh-workspace-project-menu" role="menu" @click.stop>
+                <div v-if="projectMenuOpenId === project.id" class="omp-workspace-project-menu" role="menu" @click.stop>
                   <button type="button" role="menuitem" @click="closeProjectMenu">{{ copy.viewOptions }}</button>
                 </div>
               </div>
               <Teleport to="body">
                 <div
                   v-if="projectHoverId === project.id && !props.collapsed"
-                  class="dsh-workspace-hover-card"
+                  class="omp-workspace-hover-card"
                   role="tooltip"
                   :style="{ top: `${projectHoverTop}px` }"
                 >
@@ -342,31 +342,31 @@ function addWorkspace() {
                   <span>创建于 2026年9月3日 08:57</span>
                 </div>
               </Teleport>
-              <div v-if="isProjectExpanded(project.id)" class="dsh-workspace-session-list">
+              <div v-if="isProjectExpanded(project.id)" class="omp-workspace-session-list">
                 <button
                   v-if="props.activeSessionId === null && project.id === 'codex'"
-                  class="dsh-workspace-session-row dsh-workspace-session-row-active dsh-workspace-session-row-new"
+                  class="omp-workspace-session-row omp-workspace-session-row-active omp-workspace-session-row-new"
                   type="button"
                   aria-current="page"
                   @click="startSession"
                 >
-                  <span class="dsh-workspace-session-title">{{ copy.newSession }}</span>
+                  <span class="omp-workspace-session-title">{{ copy.newSession }}</span>
                 </button>
                 <button
                   v-for="session in visibleSessions(project)"
                   :key="session.id"
-                  class="dsh-workspace-session-row"
-                  :class="{ 'dsh-workspace-session-row-active': props.activeSessionId === session.id }"
+                  class="omp-workspace-session-row"
+                  :class="{ 'omp-workspace-session-row-active': props.activeSessionId === session.id }"
                   type="button"
                   :aria-current="props.activeSessionId === session.id ? 'page' : undefined"
                   @click="selectSession(session.id)"
                 >
-                  <span class="dsh-workspace-session-title">{{ session.title }}</span>
-                  <span class="dsh-workspace-session-time">{{ session.time }}</span>
+                  <span class="omp-workspace-session-title">{{ session.title }}</span>
+                  <span class="omp-workspace-session-time">{{ session.time }}</span>
                 </button>
                 <button
                   v-if="project.sessions.length > 5"
-                  class="dsh-workspace-session-overflow"
+                  class="omp-workspace-session-overflow"
                   type="button"
                   @click="toggleSessionOverflow(project.id)"
                 >
@@ -375,13 +375,13 @@ function addWorkspace() {
               </div>
             </section>
           </template>
-          <div v-else class="dsh-workspace-empty">{{ copy.noMatches }}</div>
+          <div v-else class="omp-workspace-empty">{{ copy.noMatches }}</div>
         </div>
       </section>
     </div>
 
-    <div class="dsh-sidebar-footer">
-      <button class="dsh-sidebar-settings" type="button" :aria-label="copy.settings" @click="emit('openSettings')">
+    <div class="omp-sidebar-footer">
+      <button class="omp-sidebar-settings" type="button" :aria-label="copy.settings" @click="emit('openSettings')">
         <AppIcon name="settings" :size="16" />
         <span v-if="!props.collapsed">{{ copy.settings }}</span>
       </button>
