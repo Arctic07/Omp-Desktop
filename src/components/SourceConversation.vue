@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
-import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
-
 import { useAppSettings } from '../stores/appSettings'
 import { AppIcon } from './icons'
 import FishLogo from './FishLogo.vue'
@@ -14,41 +11,25 @@ import SourceTrajectory from './SourceTrajectory.vue'
 
 const props = defineProps<{
   sessionId: string | null
+  workspacePath: string | null
+  rightPanelOpen: boolean
+}>()
+
+const emit = defineEmits<{
+  'request-workspace': []
+  'toggle-right-panel': []
+  'open-file': [path: string]
 }>()
 
 const conversationRoot = ref<HTMLElement | null>(null)
 const conversationScroll = ref<HTMLElement | null>(null)
 const { copy } = useAppSettings()
-const workspacePath = ref<string | null>(null)
 type ConversationTab = 'conversation' | 'trajectory'
 
 const activeTab = ref<ConversationTab>('conversation')
 const conversationScrollTop = ref(0)
 let rootResizeObserver: ResizeObserver | null = null
 let scrollRestoreToken = 0
-
-async function loadWorkspacePath(): Promise<void> {
-  try {
-    const currentWorkingDirectory = await invoke<string>('current_working_directory')
-    workspacePath.value = currentWorkingDirectory
-  } catch {
-    workspacePath.value = null
-  }
-}
-
-async function chooseWorkspace(): Promise<void> {
-  try {
-    const selectedPath = await open({
-      directory: true,
-      multiple: false,
-      title: copy.value.chooseWorkspace,
-    })
-
-    if (typeof selectedPath === 'string') workspacePath.value = selectedPath
-  } catch {
-    // Keep the current workspace when the native dialog cannot open.
-  }
-}
 
 function invalidateScheduledScrollRestore(): void {
   scrollRestoreToken += 1
@@ -81,6 +62,14 @@ function selectTab(nextTab: ConversationTab): void {
   if (nextTab === 'conversation') scheduleScrollRestore(conversationScrollTop.value)
 }
 
+function requestWorkspace(): void {
+  emit('request-workspace')
+}
+
+function openFile(path: string): void {
+  emit('open-file', path)
+}
+
 watch(() => props.sessionId, () => {
   activeTab.value = 'conversation'
   conversationScrollTop.value = 0
@@ -94,7 +83,6 @@ onUnmounted(() => {
 })
 
 onMounted(() => {
-  void loadWorkspacePath()
   if (typeof ResizeObserver === 'undefined' || conversationRoot.value === null) return
 
   rootResizeObserver = new ResizeObserver(([entry]) => {
@@ -112,7 +100,11 @@ onMounted(() => {
       v-if="props.sessionId !== null"
       :session-id="props.sessionId"
       :active-tab="activeTab"
+      :workspace-path="props.workspacePath"
+      :right-panel-open="props.rightPanelOpen"
       @update:active-tab="selectTab"
+      @request-workspace="requestWorkspace"
+      @toggle-right-panel="emit('toggle-right-panel')"
     />
     <div class="omp-conversation-body">
       <div ref="conversationScroll" class="omp-conversation-scroll-body" :class="{ 'omp-conversation-scroll-body-empty': props.sessionId === null, 'omp-conversation-scroll-body-session': props.sessionId !== null }">
@@ -129,7 +121,7 @@ onMounted(() => {
             :class="{ 'omp-conversation-tab-pane-inactive': activeTab !== 'conversation' }"
             :aria-hidden="activeTab !== 'conversation'"
           >
-            <SourceConversationFeed :scroll-element="conversationScroll" />
+            <SourceConversationFeed :scroll-element="conversationScroll" @open-file="openFile" />
           </div>
           <div
             class="omp-conversation-tab-pane omp-conversation-tab-pane-trajectory"
@@ -156,21 +148,21 @@ onMounted(() => {
                 <button
                   class="omp-hero-workspace"
                   type="button"
-                  :aria-label="workspacePath ?? copy.chooseWorkspace"
+                  :aria-label="props.workspacePath ?? copy.chooseWorkspace"
                   aria-haspopup="dialog"
-                  :title="workspacePath ?? copy.chooseWorkspace"
-                  @click="chooseWorkspace"
+                  :title="props.workspacePath ?? copy.chooseWorkspace"
+                  @click="requestWorkspace"
                 >
                   <AppIcon name="folder" class="omp-hero-workspace-folder" :size="16" />
-                  <span class="omp-hero-workspace-path">{{ workspacePath ?? copy.chooseWorkspace }}</span>
+                  <span class="omp-hero-workspace-path">{{ props.workspacePath ?? copy.chooseWorkspace }}</span>
                   <AppIcon name="chevron-down" class="omp-hero-workspace-chevron" :size="12" />
                 </button>
               </div>
 
               <SourceComposer
-                :disabled="props.sessionId === null && workspacePath === null"
-                :workspace-trigger="props.sessionId === null && workspacePath === null"
-                @request-workspace="chooseWorkspace"
+                :disabled="props.sessionId === null && props.workspacePath === null"
+                :workspace-trigger="props.sessionId === null && props.workspacePath === null"
+                @request-workspace="requestWorkspace"
               />
 
               <div v-if="props.sessionId !== null" class="omp-composer-stats" aria-label="Conversation statistics">

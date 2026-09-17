@@ -1,13 +1,27 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
+
+import { open } from '@tauri-apps/plugin-dialog'
 
 import type { SourceThinkingLevel } from '../i18n'
+import { useDesktopFileDrop, type DesktopDropPath } from '../composables/useDesktopFileDrop'
 import { useAppSettings } from '../stores/appSettings'
 import { AppIcon } from './icons'
 
 const { copy } = useAppSettings()
 
-const modelGroups = [
+interface SourceModel {
+  id: string
+  name: string
+  provider: string
+}
+
+interface SourceModelGroup {
+  provider: string
+  models: readonly SourceModel[]
+}
+
+const modelGroups: readonly SourceModelGroup[] = [
   {
     provider: 'DeepSeek',
     models: [
@@ -28,9 +42,21 @@ const modelGroups = [
   },
 ] as const
 
-const modelOptions = modelGroups.flatMap((group) => group.models)
-type ModelId = typeof modelGroups[number]['models'][number]['id']
+const modelOptions: readonly SourceModel[] = modelGroups.flatMap((group) => group.models)
+type ModelId = string
 type ModelMenuPane = 'root' | 'model' | 'thinking'
+
+interface ComposerAttachment {
+  path: string
+  name: string
+}
+
+interface ComposerSubmitPayload {
+  text: string
+  paths: readonly string[]
+  modelId: ModelId
+  thinking: SourceThinkingLevel
+}
 
 const props = defineProps<{
   disabled?: boolean
@@ -39,6 +65,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   requestWorkspace: []
+  submit: [payload: ComposerSubmitPayload]
 }>()
 
 const draft = ref('')
@@ -47,62 +74,179 @@ const modelMenuOpen = ref(false)
 const modelMenuPane = ref<ModelMenuPane>('root')
 const selectedModelId = ref<ModelId>('gpt-5.6-luna')
 const selectedThinkingId = ref<SourceThinkingLevel>('high')
-const canSend = computed(() => draft.value.trim().length > 0 && !props.disabled)
-const selectedModel = computed(() => modelOptions.find((model) => model.id === selectedModelId.value) ?? modelOptions[0])
+const attachments = ref<ComposerAttachment[]>([])
+const dropNotice = ref('')
+const composerCard = ref<HTMLDivElement | null>(null)
+const composerInput = ref<HTMLDivElement | null>(null)
+const canSend = computed(() => (draft.value.trim().length > 0 || attachments.value.length > 0) && !props.disabled)
+const selectedModel = computed(() => modelOptions.find((model) => model.id === selectedModelId.value) ?? modelOptions[0]!)
+const attachmentLabel = computed(() => copy.value.attachedFiles.replace('{count}', String(attachments.value.length)))
 const selectedThinking = computed(() =>
   copy.value.thinkingOptions.find((option) => option.value === selectedThinkingId.value) ?? copy.value.thinkingOptions[0],
 )
 
-function requestWorkspace() {
+function attachmentKey(path: string): string {
+  return path.replaceAll('\\', '/').replace(/\/+$/, '').toLocaleLowerCase()
+}
+
+function attachmentName(path: string): string {
+  const normalized = path.replaceAll('\\', '/')
+  return normalized.slice(normalized.lastIndexOf('/') + 1) || normalized
+}
+
+function isDirectoryPath(path: string): boolean {
+  const trimmed = path.trim()
+  return trimmed === '.' || trimmed === '..' || trimmed.endsWith('/') || trimmed.endsWith('\\')
+}
+
+function requestWorkspace(): void {
   if (props.workspaceTrigger) emit('requestWorkspace')
 }
 
-function updateDraft(event: Event) {
+function updateDraft(event: Event): void {
   const target = event.currentTarget
   if (target instanceof HTMLElement) draft.value = target.innerText
 }
 
-function openModelMenu() {
+function openModelMenu(): void {
   modelMenuOpen.value = true
   modelMenuPane.value = 'root'
 }
 
-function closeModelMenu() {
+function closeModelMenu(): void {
   modelMenuOpen.value = false
   modelMenuPane.value = 'root'
 }
 
-function toggleModelMenu() {
+function toggleModelMenu(): void {
   if (modelMenuOpen.value) closeModelMenu()
   else openModelMenu()
 }
 
-function enterModelPane(pane: Exclude<ModelMenuPane, 'root'>) {
+function enterModelPane(pane: Exclude<ModelMenuPane, 'root'>): void {
   modelMenuPane.value = pane
 }
 
-function selectModel(id: ModelId) {
+function selectModel(id: ModelId): void {
   const model = modelOptions.find((option) => option.id === id)
   if (model !== undefined) selectedModelId.value = model.id
   closeModelMenu()
 }
 
-function selectThinking(id: SourceThinkingLevel) {
+function selectThinking(id: SourceThinkingLevel): void {
   const option = copy.value.thinkingOptions.find((choice) => choice.value === id)
   if (option !== undefined) selectedThinkingId.value = option.value
   closeModelMenu()
 }
 
-function submit() {
-  if (!canSend.value) return
+function removeAttachment(path: string): void {
+  const key = attachmentKey(path)
+  attachments.value = attachments.value.filter((attachment) => attachmentKey(attachment.path) !== key)
+}
+
+function addAttachmentPaths(paths: readonly DesktopDropPath[]): void {
+  if (props.disabled) return
+
+  const nextAttachments = [...attachments.value]
+  const seen = new Set(nextAttachments.map((attachment) => attachmentKey(attachment.path)))
+  let skippedDirectory = false
+  for (const item of paths) {
+    const path = item.path.trim()
+    if (path.length === 0) continue
+    if (item.kind === 'directory' || isDirectoryPath(path)) {
+      skippedDirectory = true
+      continue
+    }
+    const key = attachmentKey(path)
+    if (seen.has(key)) continue
+    seen.add(key)
+    nextAttachments.push({ path, name: attachmentName(path) })
+  }
+  attachments.value = nextAttachments
+  dropNotice.value = skippedDirectory ? copy.value.droppedDirectory : ''
+}
+
+function handleDesktopDragOver(event: DragEvent): void {
+  if (props.disabled) return
+  handleDragOver(event)
+}
+
+function handleDesktopDrop(event: DragEvent): void {
+  if (props.disabled) return
+  handleDrop(event)
+}
+
+function handleDroppedPaths(paths: readonly DesktopDropPath[]): void {
+  addAttachmentPaths(paths)
+}
+
+const { dragging, handleDragOver, handleDrop, handleDragLeave } = useDesktopFileDrop(composerCard, handleDroppedPaths)
+
+async function chooseFiles(): Promise<void> {
+  if (props.disabled) return
+  try {
+    const selectedPaths = await open({
+      directory: false,
+      multiple: true,
+      title: copy.value.chooseFiles,
+    })
+    if (Array.isArray(selectedPaths)) {
+      addAttachmentPaths(selectedPaths.map((path) => ({ path, kind: 'file' })))
+    }
+  } catch {
+    return
+  }
+}
+
+function clearComposerInput(): void {
+  if (composerInput.value !== null) composerInput.value.textContent = ''
   draft.value = ''
+  attachments.value = []
+  dropNotice.value = ''
+}
+
+function submit(): void {
+  if (!canSend.value) return
+  emit('submit', {
+    text: draft.value,
+    paths: attachments.value.map((attachment) => attachment.path),
+    modelId: selectedModelId.value,
+    thinking: selectedThinkingId.value,
+  })
+  clearComposerInput()
+  void nextTick(() => composerInput.value?.focus())
 }
 </script>
 
 <template>
-  <div class="omp-composer" :class="{ 'omp-composer-disabled': props.disabled, 'omp-composer-trigger': props.workspaceTrigger }" data-composer-card @click="requestWorkspace">
+  <div
+    ref="composerCard"
+    class="omp-composer"
+    :class="{
+      'omp-composer-disabled': props.disabled,
+      'omp-composer-trigger': props.workspaceTrigger,
+      'omp-composer-drop-active': dragging,
+    }"
+    data-composer-card
+    @click="requestWorkspace"
+    @dragover="handleDesktopDragOver"
+    @drop="handleDesktopDrop"
+    @dragleave="handleDragLeave"
+  >
+    <div v-if="dragging" class="omp-composer-drop-overlay" aria-live="polite">{{ copy.dropFilesHere }}</div>
     <div class="omp-composer-scroll">
+      <div v-if="attachments.length > 0" class="omp-composer-attachments" role="list" :aria-label="attachmentLabel">
+        <div v-for="attachment in attachments" :key="attachmentKey(attachment.path)" class="omp-composer-attachment" role="listitem">
+          <AppIcon name="file-text" :size="15" aria-hidden="true" />
+          <span class="omp-composer-attachment-copy" :title="attachment.path">{{ attachment.name }}</span>
+          <button class="omp-composer-attachment-remove" type="button" :aria-label="`${copy.removeAttachment}: ${attachment.name}`" @click.stop="removeAttachment(attachment.path)">
+            <AppIcon name="x" :size="13" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+      <p v-if="dropNotice" class="omp-composer-drop-notice" role="status">{{ dropNotice }}</p>
       <div
+        ref="composerInput"
         class="omp-composer-input"
         :class="{ 'omp-composer-input-disabled': props.disabled, 'omp-composer-input-focused': focused }"
         :contenteditable="!props.disabled"
@@ -121,9 +265,10 @@ function submit() {
     </div>
     <div class="omp-composer-row">
       <div class="omp-composer-tools">
-        <button class="omp-composer-add" type="button" :aria-label="copy.addFiles" :disabled="props.disabled" @click.stop>
+        <button class="omp-composer-add" type="button" :aria-label="copy.addFiles" :disabled="props.disabled" @click.stop="chooseFiles">
           <AppIcon name="plus" :size="14" />
         </button>
+        <span v-if="attachments.length > 0" class="omp-composer-attachment-count" aria-hidden="true">{{ attachments.length }}</span>
       </div>
       <div class="omp-composer-trailing">
         <div v-if="!props.disabled" class="omp-composer-model-picker">
@@ -217,7 +362,7 @@ function submit() {
         </div>
         <button class="omp-composer-send" type="button" :aria-label="copy.sendMessage" :disabled="!canSend" @click.stop="submit">
           <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-            <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 2.10714 6.51277 1.85793 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
+            <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 2.10714 6.51277 1.04402 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
           </svg>
         </button>
       </div>

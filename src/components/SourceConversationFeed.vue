@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref, type VNodeRef } from 'vue'
 
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
@@ -14,6 +14,7 @@ interface UserEntry {
   text: string
   attachment?: {
     name: string
+    path: string
     meta: string
   }
 }
@@ -58,6 +59,10 @@ const props = defineProps<{
   scrollElement: HTMLElement | null
 }>()
 
+const emit = defineEmits<{
+  'open-file': [path: string]
+}>()
+
 const { copy } = useAppSettings()
 
 const entries: readonly FeedEntry[] = [
@@ -65,7 +70,7 @@ const entries: readonly FeedEntry[] = [
     id: 'user-request',
     role: 'user',
     text: '检查首页 Composer 的布局，并把模型选择和工具输出展示得更清晰。',
-    attachment: { name: 'tsconfig.node.json', meta: 'JSON 334B' },
+    attachment: { name: 'tsconfig.node.json', path: 'tsconfig.node.json', meta: 'JSON 334B' },
   },
   {
     id: 'tool-group',
@@ -273,6 +278,9 @@ const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(computed(() => ({
   useAnimationFrameWithResizeObserver: true,
   scrollEndThreshold: 96,
 })))
+const measureFeedElement: VNodeRef = (node) => {
+  if (node instanceof HTMLElement) virtualizer.value.measureElement(node)
+}
 
 const virtualRows = computed(() => virtualizer.value.getVirtualItems().map((virtualRow) => ({
   ...virtualRow,
@@ -294,7 +302,7 @@ onUnmounted(() => {
       >
         <div
           v-for="virtualRow in virtualRows"
-          :key="virtualRow.key"
+          :key="getEntryKey(virtualRow.index)"
           class="omp-conversation-feed-row"
           :class="{ 'omp-conversation-feed-row-last': virtualRow.index === entries.length - 1 }"
           :data-index="virtualRow.index"
@@ -307,7 +315,7 @@ onUnmounted(() => {
             v-if="virtualRow.entry.role === 'user'"
             class="omp-feed-message omp-feed-message-user"
             :data-index="virtualRow.index"
-            :ref="virtualizer.measureElement"
+            :ref="measureFeedElement"
           >
             <div class="omp-feed-user-stack">
               <div v-if="virtualRow.entry.attachment" class="omp-feed-attachment-card">
@@ -317,7 +325,15 @@ onUnmounted(() => {
                   <small>{{ virtualRow.entry.attachment.meta }}</small>
                 </span>
               </div>
-              <button v-if="virtualRow.entry.attachment" class="omp-feed-attachment-action" type="button">查看文件</button>
+              <button
+                v-if="virtualRow.entry.attachment"
+                class="omp-feed-attachment-action"
+                type="button"
+                :aria-label="copy.reviewOpenFile"
+                @click="emit('open-file', virtualRow.entry.attachment.path)"
+              >
+                {{ copy.reviewOpenFile }}
+              </button>
               <div class="omp-feed-message-bubble">{{ virtualRow.entry.text }}</div>
               <div class="omp-feed-message-meta">
                 <span>刚刚</span>
@@ -329,7 +345,7 @@ onUnmounted(() => {
             v-else-if="virtualRow.entry.role === 'assistant'"
             class="omp-feed-message omp-feed-message-assistant"
             :data-index="virtualRow.index"
-            :ref="virtualizer.measureElement"
+            :ref="measureFeedElement"
           >
             <div class="omp-feed-message-copy">
               <p>{{ virtualRow.entry.text }}</p>
@@ -353,7 +369,7 @@ onUnmounted(() => {
             v-else-if="virtualRow.entry.role === 'tool-group'"
             class="omp-feed-tool-group"
             :data-index="virtualRow.index"
-            :ref="virtualizer.measureElement"
+            :ref="measureFeedElement"
           >
             <AppIcon name="chevron-down" :size="14" aria-hidden="true" />
             <span class="omp-feed-tool-group-label">{{ virtualRow.entry.label }}</span>
@@ -366,7 +382,7 @@ onUnmounted(() => {
             :class="{ 'omp-feed-tool-running': virtualRow.entry.state === 'running', 'omp-feed-tool-error': virtualRow.entry.state === 'error' }"
             :open="openToolIds.has(virtualRow.entry.id)"
             @toggle="updateToolOpenState(virtualRow.entry.id, $event)"
-            :ref="virtualizer.measureElement"
+            :ref="measureFeedElement"
           >
             <summary>
               <span class="omp-feed-tool-leading" aria-hidden="true">

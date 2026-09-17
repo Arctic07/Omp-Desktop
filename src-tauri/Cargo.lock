@@ -2112,6 +2112,8 @@ dependencies = [
 name = "omp_desktop"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
+ "serde",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

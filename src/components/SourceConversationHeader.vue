@@ -9,10 +9,14 @@ type ConversationTab = 'conversation' | 'trajectory'
 const props = defineProps<{
   sessionId: string
   activeTab: ConversationTab
+  workspacePath: string | null
+  rightPanelOpen: boolean
 }>()
 
 const emit = defineEmits<{
   'update:active-tab': [tab: ConversationTab]
+  'request-workspace': []
+  'toggle-right-panel': []
 }>()
 
 const { copy } = useAppSettings()
@@ -70,15 +74,29 @@ const title = computed(() => sessionTitles[props.sessionId] ?? '本地开发会�
       </div>
     </div>
     <div class="omp-conversation-header-actions">
-      <button class="omp-conversation-header-action omp-conversation-header-workspace" type="button" :aria-label="copy.openWorkspace">
+      <button
+        class="omp-conversation-header-action omp-conversation-header-workspace"
+        type="button"
+        :aria-label="props.workspacePath ?? copy.openWorkspace"
+        :title="props.workspacePath ?? copy.openWorkspace"
+        aria-haspopup="dialog"
+        @click="emit('request-workspace')"
+      >
         <AppIcon name="folder" :size="15" />
         <AppIcon name="chevron-down" :size="12" />
       </button>
       <button class="omp-conversation-header-action" type="button" :aria-label="copy.openMoreActions">
         <AppIcon name="more-horizontal" :size="16" />
       </button>
-      <button class="omp-conversation-header-action" type="button" :aria-label="copy.openRightPanel">
-        <AppIcon name="panel-right" :size="16" />
+      <button
+        class="omp-conversation-header-action"
+        :class="{ 'omp-conversation-header-action-active': props.rightPanelOpen }"
+        type="button"
+        :aria-label="props.rightPanelOpen ? copy.closeRightPanel : copy.openRightPanel"
+        :aria-controls="'omp-work-panel'"
+        @click="emit('toggle-right-panel')"
+      >
+        <AppIcon :name="props.rightPanelOpen ? 'panel-right-open' : 'panel-right'" :size="16" />
       </button>
     </div>
   </header>

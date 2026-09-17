@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import { getSingletonHighlighter, type BundledLanguage } from 'shiki'
-
 import { useAppSettings } from '../stores/appSettings'
+import { highlightSourceCode, resolveSourceSyntaxLanguage } from '../utils/sourceSyntaxHighlighter'
+import type { SourceSyntaxLanguage } from '../utils/sourceSyntaxHighlighter'
 
 interface SourceCodeBlockProps {
   code: string
@@ -23,23 +23,7 @@ const copied = ref(false)
 const highlightedCode = ref('')
 let renderRequest = 0
 
-const languageAliases: Record<string, BundledLanguage> = {
-  bash: 'bash',
-  javascript: 'javascript',
-  js: 'javascript',
-  json: 'json',
-  powershell: 'powershell',
-  pwsh: 'powershell',
-  sh: 'bash',
-  shell: 'bash',
-  ts: 'typescript',
-  typescript: 'typescript',
-}
-
-const resolvedLanguage = computed<BundledLanguage | null>(() => {
-  const normalized = props.language.trim().toLowerCase()
-  return languageAliases[normalized] ?? null
-})
+const resolvedLanguage = computed<SourceSyntaxLanguage | null>(() => resolveSourceSyntaxLanguage(props.language))
 
 const themeName = computed(() => {
   if (typeof document === 'undefined') return 'github-dark'
@@ -49,17 +33,13 @@ const themeName = computed(() => {
 async function renderCode(): Promise<void> {
   const request = ++renderRequest
   highlightedCode.value = ''
-  if (resolvedLanguage.value === null) return
+  const language = resolvedLanguage.value
+  if (language === null) return
+
   try {
-    const highlighter = await getSingletonHighlighter({
-      langs: ['json', 'typescript', 'javascript', 'bash', 'powershell'],
-      themes: ['github-dark', 'github-light'],
-    })
+    const highlighted = await highlightSourceCode(props.code, language, themeName.value)
     if (request !== renderRequest) return
-    highlightedCode.value = highlighter.codeToHtml(props.code, {
-      lang: resolvedLanguage.value,
-      theme: themeName.value,
-    })
+    highlightedCode.value = highlighted
   } catch {
     if (request === renderRequest) highlightedCode.value = ''
   }

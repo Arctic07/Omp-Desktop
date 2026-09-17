@@ -581,3 +581,91 @@ body[data-omp-conversation-density='compact'] .omp-composer-trailing {
   opacity: 0.4;
   cursor: default;
 }
+
+.omp-composer-drop-active {
+  box-shadow: 0 0 0 2px var(--dsw-alias-state-business-primary), var(--dsw-elevation-soft);
+}
+
+.omp-composer-drop-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 4px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--dsw-alias-state-business-primary);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--dsw-alias-state-business-tertiary) 82%, transparent);
+  color: var(--dsw-alias-state-business-primary);
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.omp-composer-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 2px;
+}
+
+.omp-composer-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: min(100%, 280px);
+  min-height: 26px;
+  padding: 3px 5px 3px 8px;
+  border: 0.5px solid var(--dsw-alias-border-l3);
+  border-radius: 9px;
+  background: var(--dsw-specific-selector);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.omp-composer-attachment-copy {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.omp-composer-attachment-remove {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.omp-composer-attachment-remove:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.omp-composer-attachment-count {
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 9px;
+  background: var(--dsw-alias-state-business-tertiary);
+  color: var(--dsw-alias-state-business-primary);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.omp-composer-drop-notice {
+  margin: 0;
+  padding: 0 14px;
+  color: var(--dsw-static-red-600, #ec1313);
+  font-size: 11px;
+  line-height: 18px;
+}
