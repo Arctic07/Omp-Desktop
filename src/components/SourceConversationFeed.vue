@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, type VNodeRef } from 'vue'
 
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
@@ -76,6 +76,11 @@ const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((
   return entry === undefined ? [] : [{ ...virtualRow, entry }]
 }))
 const totalSize = computed<number>(() => virtualizer.value.getTotalSize())
+const measureVirtualRow: VNodeRef = (node) => {
+  if (typeof HTMLElement !== 'undefined' && node instanceof HTMLElement) {
+    virtualizer.value.measureElement(node)
+  }
+}
 </script>
 
 <template>
@@ -89,7 +94,7 @@ const totalSize = computed<number>(() => virtualizer.value.getTotalSize())
       >
         <div
           v-for="virtualRow in virtualRows"
-          :key="virtualRow.key"
+          :key="String(virtualRow.key)"
           class="omp-conversation-feed-row"
           :class="{ 'omp-conversation-feed-row-last': virtualRow.index === props.entries.length - 1 }"
           :data-index="virtualRow.index"
@@ -98,7 +103,7 @@ const totalSize = computed<number>(() => virtualizer.value.getTotalSize())
             '--omp-feed-row-height': `${virtualRow.size}px`,
           }"
         >
-          <div :ref="virtualizer.measureElement">
+          <div :ref="measureVirtualRow">
             <SourceConversationEntry
               :entry="virtualRow.entry"
               :open="openToolIds.has(virtualRow.entry.id)"

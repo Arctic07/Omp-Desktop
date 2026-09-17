@@ -64,12 +64,12 @@ function linePrefix(type: ReviewHunk['lines'][number]['type']): string {
 }
 
 function fileToggleLabel(section: ReviewSection, file: ReviewFile): string {
-  const label = props.isFileExpanded(section, file) ? copy.reviewCollapseFile : copy.reviewExpandFile
+  const label = props.isFileExpanded(section, file) ? copy.value.reviewCollapseFile : copy.value.reviewExpandFile
   return `${label}: ${file.path}`
 }
 
 function fileOpenLabel(file: ReviewFile): string {
-  return `${copy.reviewDiffOpenFile}: ${file.path} (${statusLetters[file.status]})`
+  return `${copy.value.reviewDiffOpenFile}: ${file.path} (${statusLetters[file.status]})`
 }
 </script>
 

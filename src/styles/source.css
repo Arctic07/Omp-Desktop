@@ -1,6 +1,7 @@
 @import './tokens.css';
 @import './base.css';
 @import './source-file-panel.css';
+@import './source-review-panel.css';
 @import './layout.css';
 @import './sidebar.css';
 @import './conversation.css';

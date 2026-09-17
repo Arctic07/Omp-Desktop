@@ -375,8 +375,8 @@ function openFile(): void {
 }
 
 .omp-source-diff-status-renamed {
-  background: color-mix(in srgb, #d7a928 16%, transparent);
-  color: #c18b12;
+  background: color-mix(in srgb, var(--omp-source-status-renamed) 16%, transparent);
+  color: var(--omp-source-status-renamed-label);
 }
 
 .omp-source-diff-meta-path {

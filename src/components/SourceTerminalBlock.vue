@@ -93,7 +93,7 @@ onUnmounted(() => {
   margin: 4px 0;
   padding-left: var(--omp-source-terminal-gutter);
   overflow: hidden;
-  border: 0.5px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
+  border: 0.5px solid var(--dsw-alias-border-l3);
   border-radius: var(--omp-source-terminal-radius);
   background: var(--dsw-alias-markdown-code-block);
   color: var(--dsw-alias-label-primary);

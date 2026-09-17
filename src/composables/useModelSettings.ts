@@ -32,6 +32,7 @@ export interface ModelSettingsState {
   saveProvider(provider: ModelProviderState): void
   cancelProvider(provider: ModelProviderState): void
   fetchModels(provider: ModelProviderState): Promise<void>
+  restoreDefaultModels(provider: ModelProviderState): void
   addSelectedModels(models: ModelEditorModel[]): void
 }
 

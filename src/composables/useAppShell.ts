@@ -34,6 +34,7 @@ export interface AppShellState {
   requestedFile: Ref<RequestedFile | null>
   requestedDiff: Ref<ReviewDiffTarget | null>
   refreshToken: Ref<number>
+  startNewSession(): void
   toggleSidebar(): void
   selectSession(sessionId: string): void
   openSettings(): void

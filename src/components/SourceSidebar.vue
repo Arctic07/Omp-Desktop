@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAppSettings } from '../stores/appSettings'
-import type { WorkspaceProject } from '../utils/workspaceData'
+import type { WorkspaceProject } from '../utils/workspaceTypes'
 import { AppIcon } from './icons'
 import FishLogo from './FishLogo.vue'
 import SourceWorkspaceList from './SourceWorkspaceList.vue'

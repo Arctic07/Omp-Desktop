@@ -129,7 +129,7 @@ onUnmounted(() => {
 .omp-source-code-block {
   margin: 4px 0;
   overflow: hidden;
-  border: 0.5px solid var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.06));
+  border: 0.5px solid var(--dsw-alias-border-l3);
   border-radius: 12px;
   background: var(--dsw-alias-markdown-code-block);
   color: var(--dsw-alias-label-primary);

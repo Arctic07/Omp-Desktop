@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, type CSSProperties, type VNodeRef } from 'vue'
 
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
@@ -82,6 +82,11 @@ const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((
   return row === undefined ? [] : [{ ...virtualRow, row }]
 }))
 const totalSize = computed<number>(() => virtualizer.value.getTotalSize())
+const measureVirtualRow: VNodeRef = (node) => {
+  if (typeof HTMLElement !== 'undefined' && node instanceof HTMLElement) {
+    virtualizer.value.measureElement(node)
+  }
+}
 
 const timelineLanes = computed(() => [
   {
@@ -101,7 +106,7 @@ const timelineLanes = computed(() => [
   },
 ])
 
-interface TrajectorySpanStyle {
+type TrajectorySpanStyle = CSSProperties & {
   '--omp-trajectory-span-left': string
   '--omp-trajectory-span-width': string
 }
@@ -113,7 +118,7 @@ function spanStyle(span: SourceTrajectoryTimelineSpan): TrajectorySpanStyle {
   }
 }
 
-interface TrajectoryRowStyle {
+type TrajectoryRowStyle = CSSProperties & {
   '--omp-trajectory-row-offset': string
   '--omp-trajectory-row-height': string
 }
@@ -189,11 +194,11 @@ function rowStyle(row: { start: number; size: number }): TrajectoryRowStyle {
           >
             <div
               v-for="virtualRow in virtualRows"
-              :key="virtualRow.key"
+              :key="String(virtualRow.key)"
               class="omp-trajectory-virtual-row"
               :data-row-type="virtualRow.row.type"
               :style="rowStyle(virtualRow)"
-              :ref="virtualizer.measureElement"
+              :ref="measureVirtualRow"
             >
               <SourceTrajectoryRow :row="virtualRow.row" />
             </div>

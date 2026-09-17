@@ -1,22 +1,22 @@
 .omp-source-file-panel {
   --omp-source-file-color-plain: var(--dsw-alias-label-secondary);
-  --omp-source-file-color-typescript: #4f8cff;
-  --omp-source-file-color-javascript: #d7a928;
-  --omp-source-file-color-json: #b07cff;
-  --omp-source-file-color-css: #e16bc0;
-  --omp-source-file-color-html: #ef7553;
-  --omp-source-file-color-markdown: #4cb5a5;
-  --omp-source-file-color-rust: #e5824f;
-  --omp-source-file-color-python: #5aa879;
-  --omp-source-file-color-go: #48b7cc;
-  --omp-source-file-color-shell: #a879e6;
-  --omp-source-file-color-config: #4ea8a1;
-  --omp-source-file-color-sql: #54b775;
-  --omp-source-file-color-swift: #e97878;
-  --omp-source-file-color-kotlin: #9c79dd;
-  --omp-source-file-color-java: #db6f5e;
-  --omp-source-file-color-c: #6c9fe8;
-  --omp-source-file-color-image: #dc6ca8;
+  --omp-source-file-color-typescript: var(--omp-palette-file-typescript);
+  --omp-source-file-color-javascript: var(--omp-palette-file-javascript);
+  --omp-source-file-color-json: var(--omp-palette-file-json);
+  --omp-source-file-color-css: var(--omp-palette-file-css);
+  --omp-source-file-color-html: var(--omp-palette-file-html);
+  --omp-source-file-color-markdown: var(--omp-palette-file-markdown);
+  --omp-source-file-color-rust: var(--omp-palette-file-rust);
+  --omp-source-file-color-python: var(--omp-palette-file-python);
+  --omp-source-file-color-go: var(--omp-palette-file-go);
+  --omp-source-file-color-shell: var(--omp-palette-file-shell);
+  --omp-source-file-color-config: var(--omp-palette-file-config);
+  --omp-source-file-color-sql: var(--omp-palette-file-sql);
+  --omp-source-file-color-swift: var(--omp-palette-file-swift);
+  --omp-source-file-color-kotlin: var(--omp-palette-file-kotlin);
+  --omp-source-file-color-java: var(--omp-palette-file-java);
+  --omp-source-file-color-c: var(--omp-palette-file-c);
+  --omp-source-file-color-image: var(--omp-palette-file-image);
   --omp-source-file-color-directory: var(--dsw-alias-label-secondary);
   display: flex;
   flex: 1;
@@ -229,7 +229,7 @@
 }
 
 .omp-source-file-panel-state-error {
-  color: var(--dsw-static-red-600, #ec1313);
+  color: var(--dsw-static-red-600);
 }
 
 .omp-source-file-panel-error,
@@ -238,7 +238,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: var(--dsw-static-red-600, #ec1313);
+  color: var(--dsw-static-red-600);
   font-size: 12px;
   line-height: 18px;
 }
@@ -247,9 +247,9 @@
   flex: none;
   margin: 10px 12px 0;
   padding: 8px 10px;
-  border: 0.5px solid color-mix(in srgb, var(--dsw-static-red-600, #ec1313) 32%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--dsw-static-red-600) 32%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--dsw-static-red-600, #ec1313) 8%, transparent);
+  background: color-mix(in srgb, var(--dsw-static-red-600) 8%, transparent);
 }
 
 .omp-source-file-panel-error span,
@@ -370,7 +370,7 @@
   align-items: center;
   gap: 6px;
   margin: 0 12px 4px calc(10px + ((var(--omp-source-file-depth, 0) + 1) * 15px));
-  color: var(--dsw-static-red-600, #ec1313);
+  color: var(--dsw-static-red-600);
   font-size: 11px;
   line-height: 16px;
 }

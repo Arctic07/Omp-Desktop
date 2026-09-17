@@ -593,6 +593,7 @@ export const zh: SourceCopy = {
   toolRunning: '运行中',
   toolFailed: '失败',
   toolInput: '输入',
+  toolOutput: '输出',
   toolCopy: '复制',
   toolCopied: '已复制',
   copyFailed: '复制失败',
