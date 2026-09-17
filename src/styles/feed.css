@@ -3,7 +3,7 @@
   width: min(var(--omp-chat-content-width), calc(100% - 32px));
   max-width: 100%;
   margin: 0 auto;
-  padding: 0 0 16px;
+  padding: 24px 0 16px;
 }
 
 .omp-conversation-feed-list {
@@ -128,6 +128,42 @@
   color: var(--dsw-alias-label-caption);
   font-size: 11px;
   line-height: 18px;
+}
+
+.omp-feed-assistant-meta {
+  margin-top: 8px;
+}
+
+.omp-feed-assistant-copy {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: -3px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.omp-feed-assistant-copy:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.omp-feed-assistant-copy:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
+}
+
+.omp-feed-assistant-copy > svg {
+  width: 14px;
+  height: 14px;
 }
 
 .omp-feed-message-assistant {

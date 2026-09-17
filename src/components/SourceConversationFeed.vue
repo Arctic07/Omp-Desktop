@@ -18,10 +18,18 @@ interface UserEntry {
   }
 }
 
+interface AssistantEntryStats {
+  rounds: number
+  steps: number
+  tokensPerSecond: number
+  durationSeconds: number
+}
+
 interface AssistantEntry {
   id: string
   role: 'assistant'
   text: string
+  stats: AssistantEntryStats
 }
 
 interface ToolGroupEntry {
@@ -174,10 +182,42 @@ const entries: readonly FeedEntry[] = [
     id: 'assistant-summary',
     role: 'assistant',
     text: '输入区、消息正文、代码输出和工具调用现在使用同一套字号、行高和对齐轴；工具卡片支持展开查看输入、输出与代码内容。',
+    stats: {
+      rounds: 3,
+      steps: 4,
+      tokensPerSecond: 57,
+      durationSeconds: 9,
+    },
   },
 ]
 
 const openToolIds = ref(new Set(['tool-pwsh', 'tool-read']))
+const copiedAssistantId = ref<string | null>(null)
+let copiedAssistantTimer: number | null = null
+
+function clearCopiedAssistantTimer(): void {
+  if (copiedAssistantTimer === null) return
+  window.clearTimeout(copiedAssistantTimer)
+  copiedAssistantTimer = null
+}
+
+async function copyAssistant(entry: AssistantEntry): Promise<void> {
+  clearCopiedAssistantTimer()
+  copiedAssistantId.value = null
+  if (typeof navigator === 'undefined' || typeof navigator.clipboard?.writeText !== 'function') return
+
+  try {
+    await navigator.clipboard.writeText(entry.text)
+  } catch {
+    return
+  }
+
+  copiedAssistantId.value = entry.id
+  copiedAssistantTimer = window.setTimeout(() => {
+    copiedAssistantId.value = null
+    copiedAssistantTimer = null
+  }, 1600)
+}
 
 function updateToolOpenState(id: string, event: Event): void {
   const details = event.currentTarget
@@ -203,7 +243,9 @@ function estimateEntrySize(index: number): number {
   if (entry.role === 'tool-group') return 32 + rowGap
   if (entry.role === 'assistant') {
     const lineCount = Math.max(1, Math.ceil(entry.text.length / 72))
-    return 24 + lineCount * 24 + rowGap
+    const messageHeight = lineCount * 24
+    const metaHeight = 24
+    return 24 + messageHeight + 8 + metaHeight + rowGap
   }
 
   if (entry.role === 'user') {
@@ -250,6 +292,7 @@ watch([totalSize, () => props.scrollElement], ([, element]) => {
 }, { flush: 'post', immediate: true })
 
 onUnmounted(() => {
+  clearCopiedAssistantTimer()
   if (initialScrollTimer !== null) window.clearTimeout(initialScrollTimer)
 })
 
@@ -309,6 +352,20 @@ watch(() => props.scrollElement, (element) => {
           >
             <div class="omp-feed-message-copy">
               <p>{{ virtualRow.entry.text }}</p>
+            </div>
+            <div class="omp-feed-message-meta omp-feed-assistant-meta">
+              <button
+                class="omp-feed-assistant-copy"
+                type="button"
+                :aria-label="copiedAssistantId === virtualRow.entry.id ? copy.toolCopied : copy.toolCopy"
+                :title="copiedAssistantId === virtualRow.entry.id ? copy.toolCopied : copy.toolCopy"
+                @click="copyAssistant(virtualRow.entry)"
+              >
+                <AppIcon :name="copiedAssistantId === virtualRow.entry.id ? 'check' : 'copy'" :size="14" aria-hidden="true" />
+              </button>
+              <span>用时 {{ virtualRow.entry.stats.durationSeconds }} 秒</span>
+              <span>{{ virtualRow.entry.stats.tokensPerSecond }} tok/s</span>
+              <span>{{ virtualRow.entry.stats.rounds }} 轮 {{ virtualRow.entry.stats.steps }} 步</span>
             </div>
           </article>
           <section

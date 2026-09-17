@@ -276,13 +276,11 @@ body[data-omp-conversation-density='compact'] .omp-composer-row {
 }
 
 body[data-omp-conversation-density='compact'] .omp-composer-tools,
-body[data-omp-conversation-density='compact'] .omp-composer-modes,
 body[data-omp-conversation-density='compact'] .omp-composer-trailing {
   gap: 8px;
 }
 
 .omp-composer-tools,
-.omp-composer-modes,
 .omp-composer-trailing {
   display: flex;
   align-items: center;
@@ -290,10 +288,6 @@ body[data-omp-conversation-density='compact'] .omp-composer-trailing {
 }
 
 .omp-composer-tools {
-  gap: 12px;
-}
-
-.omp-composer-modes {
   gap: 12px;
 }
 
@@ -360,19 +354,8 @@ body[data-omp-conversation-density='compact'] .omp-composer-trailing {
   cursor: pointer;
 }
 
-.omp-composer-access {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding-inline: 8px;
-}
-
 .omp-composer-select:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover);
-}
-.omp-composer-select-active {
-  background: var(--dsw-alias-state-business-tertiary);
-  color: var(--dsw-alias-label-primary-bluish);
 }
 
 .omp-composer-model-picker {

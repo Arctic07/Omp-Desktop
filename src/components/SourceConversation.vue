@@ -109,7 +109,6 @@ onMounted(() => {
 
               <div v-if="props.sessionId !== null" class="omp-composer-stats" aria-label="Conversation statistics">
                 <span>3 轮 4 步 · 57 tok/s</span>
-                <span>◷ 用时 9 秒</span>
                 <span>28.1K tok · 缓存命中 65%</span>
               </div>
             </div>

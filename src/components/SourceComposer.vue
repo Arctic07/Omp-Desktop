@@ -43,7 +43,6 @@ const emit = defineEmits<{
 
 const draft = ref('')
 const focused = ref(false)
-const planActive = ref(false)
 const modelMenuOpen = ref(false)
 const modelMenuPane = ref<ModelMenuPane>('root')
 const selectedModelId = ref<ModelId>('gpt-5.6-luna')
@@ -125,19 +124,6 @@ function submit() {
         <button class="omp-composer-add" type="button" :aria-label="copy.addFiles" :disabled="props.disabled" @click.stop>
           <AppIcon name="plus" :size="14" />
         </button>
-        <div v-if="!props.disabled" class="omp-composer-modes">
-          <button
-            class="omp-composer-select omp-composer-access"
-            :class="{ 'omp-composer-select-active': planActive }"
-            type="button"
-            :aria-pressed="planActive"
-            @click.stop="planActive = !planActive"
-          >
-            <AppIcon name="shield" :size="13" />
-            <span>{{ copy.workspaceEditMode }}</span>
-            <AppIcon name="chevron-down" :size="12" />
-          </button>
-        </div>
       </div>
       <div class="omp-composer-trailing">
         <div v-if="!props.disabled" class="omp-composer-model-picker">

@@ -263,8 +263,6 @@ export interface SourceCopy {
   messagePlaceholder: string
   addFiles: string
   sendMessage: string
-  planMode: string
-  workspaceEditMode: string
   conversationMode: string
   conversationTab: string
   trajectoryTab: string
@@ -318,8 +316,6 @@ const en: SourceCopy = {
   messagePlaceholder: 'Message, run a command, or mention a file',
   addFiles: 'Add files or run commands',
   sendMessage: 'Send message',
-  planMode: 'Plan',
-  workspaceEditMode: 'Workspace edits',
   conversationMode: 'Standard mode',
   conversationTab: 'Chat',
   trajectoryTab: 'Trajectory',
@@ -645,8 +641,6 @@ const zh: SourceCopy = {
   composerPlaceholder: '选择一个工作区开始',
   addFiles: '添加文件或调用指令',
   sendMessage: '发送消息',
-  planMode: '计划',
-  workspaceEditMode: '工作区内修改',
   conversationMode: '标准模式',
   conversationTab: '对话',
   trajectoryTab: '轨迹',
