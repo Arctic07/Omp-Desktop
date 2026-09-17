@@ -664,8 +664,7 @@ input:focus-visible,
   --dsh-composer-side-clearance: 16px;
 }
 
-.dsh-conversation-body,
-.dsh-conversation-scroll-body {
+.dsh-conversation-body {
   display: flex;
   flex: 1;
   min-height: 0;
@@ -673,12 +672,29 @@ input:focus-visible,
 }
 
 .dsh-conversation-scroll-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
   justify-content: center;
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
+
+.dsh-conversation-scroll-body-empty {
+  display: none;
+}
+
 .dsh-conversation-scroll-body-session {
   justify-content: flex-start;
+}
+
+.dsh-conversation-header {
+  flex: none;
+  width: min(calc(var(--dsh-composer-card-max-width) + 32px), 100%);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 30px 24px 0;
 }
 
 .dsh-composer-seat-session {
@@ -691,11 +707,11 @@ input:focus-visible,
 }
 
 .dsh-conversation-feed {
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   width: min(calc(var(--dsh-composer-card-max-width) + 32px), 100%);
   max-width: 100%;
   margin: 0 auto;
-  padding: 30px 24px 12px;
+  padding: 0 24px 12px;
 }
 
 .dsh-conversation-feed-header {
@@ -740,10 +756,36 @@ input:focus-visible,
 }
 
 .dsh-conversation-feed-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  position: relative;
+  min-width: 0;
   padding: 24px 0 18px;
+  overflow-anchor: none;
+}
+
+.dsh-conversation-feed-spacer {
+  position: relative;
+  width: 100%;
+  height: var(--dsh-feed-total-size);
+}
+
+.dsh-conversation-feed-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-width: 0;
+  height: var(--dsh-feed-row-height);
+  transform: translateY(var(--dsh-feed-row-offset));
+}
+
+.dsh-conversation-feed-row > .dsh-feed-message,
+.dsh-conversation-feed-row > .dsh-feed-tool {
+  padding-bottom: 18px;
+}
+
+.dsh-conversation-feed-row-last > .dsh-feed-message,
+.dsh-conversation-feed-row-last > .dsh-feed-tool {
+  padding-bottom: 0;
 }
 
 .dsh-feed-message {
@@ -953,6 +995,7 @@ input:focus-visible,
 
 .dsh-composer-hero {
   align-self: center;
+  flex: 1;
   width: min(calc(var(--dsh-composer-card-max-width) + 32px), 100%);
   padding-bottom: 32px;
 }

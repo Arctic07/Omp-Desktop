@@ -9,11 +9,13 @@ import { AppIcon } from './icons'
 import FishLogo from './FishLogo.vue'
 import SourceComposer from './SourceComposer.vue'
 import SourceConversationFeed from './SourceConversationFeed.vue'
+import SourceConversationHeader from './SourceConversationHeader.vue'
 
 const props = defineProps<{
   sessionId: string | null
 }>()
 
+const conversationScroll = ref<HTMLElement | null>(null)
 const { copy } = useAppSettings()
 const workspacePath = ref<string | null>(null)
 
@@ -47,43 +49,44 @@ onMounted(() => {
 
 <template>
   <section class="dsh-conversation-root" data-phase="hero" aria-label="Conversation">
+    <SourceConversationHeader v-if="props.sessionId !== null" :session-id="props.sessionId" />
     <div class="dsh-conversation-body">
-      <div class="dsh-conversation-scroll-body" :class="{ 'dsh-conversation-scroll-body-session': props.sessionId !== null }">
-        <SourceConversationFeed v-if="props.sessionId !== null" :session-id="props.sessionId" />
-        <div class="dsh-composer-seat" :class="{ 'dsh-composer-hero': props.sessionId === null, 'dsh-composer-seat-session': props.sessionId !== null }">
-          <div class="dsh-hero-shell">
-            <div class="dsh-hero-stack">
-              <div v-if="props.sessionId === null" class="dsh-hero-headline">
-                <span class="dsh-hero-fish-hitbox">
-                  <FishLogo class="dsh-hero-fish" :size="34" />
-                </span>
-                <span class="dsh-hero-title-group">
-                  <span>{{ copy.heroHeadline }}</span>
-                  <span class="dsh-hero-preview">{{ copy.preview }}</span>
-                </span>
-              </div>
-
-              <div class="dsh-hero-workspace-row">
-                <button
-                  class="dsh-hero-workspace"
-                  type="button"
-                  :aria-label="workspacePath ?? copy.chooseWorkspace"
-                  aria-haspopup="dialog"
-                  :title="workspacePath ?? copy.chooseWorkspace"
-                  @click="chooseWorkspace"
-                >
-                  <AppIcon name="folder" class="dsh-hero-workspace-folder" :size="16" />
-                  <span class="dsh-hero-workspace-path">{{ workspacePath ?? copy.chooseWorkspace }}</span>
-                  <AppIcon name="chevron-down" class="dsh-hero-workspace-chevron" :size="12" />
-                </button>
-              </div>
-
-              <SourceComposer
-                :disabled="workspacePath === null"
-                :workspace-trigger="workspacePath === null"
-                @request-workspace="chooseWorkspace"
-              />
+      <div ref="conversationScroll" class="dsh-conversation-scroll-body" :class="{ 'dsh-conversation-scroll-body-empty': props.sessionId === null, 'dsh-conversation-scroll-body-session': props.sessionId !== null }">
+        <SourceConversationFeed v-if="props.sessionId !== null" :scroll-element="conversationScroll" />
+      </div>
+      <div class="dsh-composer-seat" :class="{ 'dsh-composer-hero': props.sessionId === null, 'dsh-composer-seat-session': props.sessionId !== null }">
+        <div class="dsh-hero-shell">
+          <div class="dsh-hero-stack">
+            <div v-if="props.sessionId === null" class="dsh-hero-headline">
+              <span class="dsh-hero-fish-hitbox">
+                <FishLogo class="dsh-hero-fish" :size="34" />
+              </span>
+              <span class="dsh-hero-title-group">
+                <span>{{ copy.heroHeadline }}</span>
+                <span class="dsh-hero-preview">{{ copy.preview }}</span>
+              </span>
             </div>
+
+            <div class="dsh-hero-workspace-row">
+              <button
+                class="dsh-hero-workspace"
+                type="button"
+                :aria-label="workspacePath ?? copy.chooseWorkspace"
+                aria-haspopup="dialog"
+                :title="workspacePath ?? copy.chooseWorkspace"
+                @click="chooseWorkspace"
+              >
+                <AppIcon name="folder" class="dsh-hero-workspace-folder" :size="16" />
+                <span class="dsh-hero-workspace-path">{{ workspacePath ?? copy.chooseWorkspace }}</span>
+                <AppIcon name="chevron-down" class="dsh-hero-workspace-chevron" :size="12" />
+              </button>
+            </div>
+
+            <SourceComposer
+              :disabled="workspacePath === null"
+              :workspace-trigger="workspacePath === null"
+              @request-workspace="chooseWorkspace"
+            />
           </div>
         </div>
       </div>

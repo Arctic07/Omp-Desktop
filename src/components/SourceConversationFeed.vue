@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+
+import { useVirtualizer } from '@tanstack/vue-virtual'
 
 interface UserEntry {
   id: string
@@ -26,16 +28,8 @@ interface ToolEntry {
 type FeedEntry = UserEntry | AssistantEntry | ToolEntry
 
 const props = defineProps<{
-  sessionId: string
+  scrollElement: HTMLElement | null
 }>()
-
-const sessionTitles: Record<string, string> = {
-  'session-omp-build': '首页 Composer 优化',
-  'session-omp-settings': '常规设置功能',
-  'session-harness-ui': '检查 UI 信息流',
-  'session-harness-tools': '工具调用输出',
-  'session-scratch': '整理实验代码',
-}
 
 const entries: readonly FeedEntry[] = [
   {
@@ -64,7 +58,7 @@ const entries: readonly FeedEntry[] = [
     summary: '生成 Composer 状态模型',
     state: 'success',
     kind: 'code',
-    body: "const selectedModel = 'GPT-5.6 Luna Default'\nconst planEnabled = true\nconst workspace = 'C:\\project\\Omp-Desktop'", 
+    body: "const selectedModel = 'GPT-5.6 Luna Default'\nconst planEnabled = true\nconst workspace = 'C:\\project\\Omp-Desktop'",
   },
   {
     id: 'tool-check',
@@ -82,51 +76,127 @@ const entries: readonly FeedEntry[] = [
   },
 ]
 
-const title = computed(() => sessionTitles[props.sessionId] ?? '本地开发会话')
+const feedList = ref<HTMLElement | null>(null)
+const openToolIds = ref(new Set(['tool-read', 'tool-code']))
+
+function updateToolOpenState(id: string, event: Event): void {
+  const details = event.currentTarget
+  if (!(details instanceof HTMLDetailsElement)) return
+
+  const nextOpenToolIds = new Set(openToolIds.value)
+  if (details.open) nextOpenToolIds.add(id)
+  else nextOpenToolIds.delete(id)
+  openToolIds.value = nextOpenToolIds
+}
+
+function estimateEntrySize(index: number): number {
+  const entry = entries[index]
+  if (entry === undefined) return 48
+
+  const rowGap = index === entries.length - 1 ? 0 : 18
+  if (entry.role === 'assistant') {
+    const lineCount = Math.max(1, Math.ceil(entry.text.length / 72))
+    return 46 + lineCount * 24 + rowGap
+  }
+
+  if (entry.role === 'user') {
+    const lineCount = Math.max(1, Math.ceil(entry.text.length / 72))
+    return 42 + lineCount * 22 + rowGap
+  }
+
+  const bodyLineCount = Math.max(1, entry.body.split('\n').length)
+  const bodySize = entry.id === 'tool-read' || entry.id === 'tool-code'
+    ? Math.min(220, 24 + bodyLineCount * 18)
+    : 0
+  return 28 + bodySize + rowGap
+}
+
+function getEntryKey(index: number): string {
+  return entries[index].id
+}
+
+const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(computed(() => ({
+  count: entries.length,
+  getScrollElement: () => props.scrollElement,
+  getItemKey: getEntryKey,
+  estimateSize: estimateEntrySize,
+  initialRect: { width: 1024, height: 720 },
+  overscan: 7,
+  useAnimationFrameWithResizeObserver: true,
+  anchorTo: 'end' as const,
+  followOnAppend: 'auto' as const,
+  scrollEndThreshold: 96,
+})))
+
+const virtualRows = computed(() => virtualizer.value.getVirtualItems().map((virtualRow) => ({
+  ...virtualRow,
+  entry: entries[virtualRow.index],
+})))
+const totalSize = computed(() => virtualizer.value.getTotalSize())
 </script>
 
 <template>
   <section class="dsh-conversation-feed" aria-label="Conversation stream">
-    <header class="dsh-conversation-feed-header">
-      <div>
-        <p class="dsh-conversation-feed-kicker">Omp Desktop</p>
-        <h1>{{ title }}</h1>
-      </div>
-      <span class="dsh-conversation-feed-status"><span aria-hidden="true" /> Active</span>
-    </header>
-
-    <div class="dsh-conversation-feed-list">
-      <template v-for="entry in entries" :key="entry.id">
-        <article v-if="entry.role === 'user'" class="dsh-feed-message dsh-feed-message-user">
-          <div class="dsh-feed-message-bubble">{{ entry.text }}</div>
-          <span class="dsh-feed-message-time">刚刚</span>
-        </article>
-        <article v-else-if="entry.role === 'assistant'" class="dsh-feed-message dsh-feed-message-assistant">
-          <div class="dsh-feed-avatar" aria-hidden="true">O</div>
-          <div class="dsh-feed-message-copy">
-            <strong>Omp Desktop</strong>
-            <p>{{ entry.text }}</p>
-          </div>
-        </article>
-        <details
-          v-else
-          class="dsh-feed-tool"
-          :class="{ 'dsh-feed-tool-running': entry.state === 'running' }"
-          :open="entry.id === 'tool-read' || entry.id === 'tool-code'"
+    <div ref="feedList" class="dsh-conversation-feed-list">
+      <div
+        class="dsh-conversation-feed-spacer"
+        :style="{ '--dsh-feed-total-size': `${totalSize}px` }"
+      >
+        <div
+          v-for="virtualRow in virtualRows"
+          :key="virtualRow.key"
+          class="dsh-conversation-feed-row"
+          :class="{ 'dsh-conversation-feed-row-last': virtualRow.index === entries.length - 1 }"
+          :data-index="virtualRow.index"
+          :style="{
+            '--dsh-feed-row-offset': `${virtualRow.start}px`,
+            '--dsh-feed-row-height': `${virtualRow.size}px`,
+          }"
         >
-          <summary>
-            <span class="dsh-feed-tool-leading" aria-hidden="true">
-              <span class="dsh-feed-tool-dot" />
-              <span class="dsh-feed-tool-chevron">›</span>
-            </span>
-            <strong>{{ entry.title }}</strong>
-            <span class="dsh-feed-tool-separator" aria-hidden="true" />
-            <span class="dsh-feed-tool-summary">{{ entry.summary }}</span>
-            <span class="dsh-feed-tool-state">{{ entry.state === 'running' ? 'Running' : 'Done' }}</span>
-          </summary>
-          <pre :class="{ 'dsh-feed-code-block': entry.kind === 'code' }"><code>{{ entry.body }}</code></pre>
-        </details>
-      </template>
+          <article
+            v-if="virtualRow.entry.role === 'user'"
+            class="dsh-feed-message dsh-feed-message-user"
+            :data-index="virtualRow.index"
+            :ref="virtualizer.measureElement"
+          >
+            <div class="dsh-feed-message-bubble">{{ virtualRow.entry.text }}</div>
+            <span class="dsh-feed-message-time">刚刚</span>
+          </article>
+          <article
+            v-else-if="virtualRow.entry.role === 'assistant'"
+            class="dsh-feed-message dsh-feed-message-assistant"
+            :data-index="virtualRow.index"
+            :ref="virtualizer.measureElement"
+          >
+            <div class="dsh-feed-avatar" aria-hidden="true">O</div>
+            <div class="dsh-feed-message-copy">
+              <strong>Omp Desktop</strong>
+              <p>{{ virtualRow.entry.text }}</p>
+            </div>
+          </article>
+          <details
+            v-else
+            class="dsh-feed-tool"
+            :data-index="virtualRow.index"
+            :ref="virtualizer.measureElement"
+            :class="{ 'dsh-feed-tool-running': virtualRow.entry.state === 'running' }"
+            :open="openToolIds.has(virtualRow.entry.id)"
+            @toggle="updateToolOpenState(virtualRow.entry.id, $event)"
+          >
+            <summary>
+              <span class="dsh-feed-tool-leading" aria-hidden="true">
+                <span class="dsh-feed-tool-dot" />
+                <span class="dsh-feed-tool-chevron">›</span>
+              </span>
+              <strong>{{ virtualRow.entry.title }}</strong>
+              <span class="dsh-feed-tool-separator" aria-hidden="true" />
+              <span class="dsh-feed-tool-summary">{{ virtualRow.entry.summary }}</span>
+              <span class="dsh-feed-tool-state">{{ virtualRow.entry.state === 'running' ? 'Running' : 'Done' }}</span>
+            </summary>
+            <pre :class="{ 'dsh-feed-code-block': virtualRow.entry.kind === 'code' }"><code>{{ virtualRow.entry.body }}</code></pre>
+          </details>
+        </div>
+      </div>
     </div>
   </section>
 </template>
