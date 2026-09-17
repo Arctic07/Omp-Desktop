@@ -5,7 +5,13 @@ import {
   useWorkspaceFilePanel,
   type WorkspaceFilePanelRequestedFile,
 } from '../composables/useWorkspaceFilePanel'
+import type { SourceHighlightedToken } from '../utils/sourceSyntaxHighlighter'
 import { AppIcon } from './icons'
+
+function tokenStyle(token: SourceHighlightedToken): { color?: string } | undefined {
+  return token.color === undefined ? undefined : { color: token.color }
+}
+
 
 interface SourceFilePanelProps {
   workspacePath: string | null
@@ -70,7 +76,7 @@ const {
   formatBytes,
   highlightError,
   draftContent,
-  highlightedCode,
+  highlightedLines,
 } = useWorkspaceFilePanel({
   workspacePath: toRef(props, 'workspacePath'),
   requestedFile: toRef(props, 'requestedFile'),
@@ -388,7 +394,14 @@ const {
                 />
               </div>
               <div v-else class="omp-source-file-panel-code" :aria-label="selectedPath">
-                <div v-if="highlightedCode" class="omp-source-file-panel-code-highlighted" v-html="highlightedCode" />
+                <div v-if="highlightedLines.length > 0" class="omp-source-file-panel-code-highlighted">
+                  <template v-for="(line, lineIndex) in highlightedLines" :key="lineIndex">
+                    <span class="omp-source-file-panel-code-line">
+                      <span v-for="(token, tokenIndex) in line" :key="`${lineIndex}-${tokenIndex}`" :style="tokenStyle(token)">{{ token.content }}</span>
+                    </span>
+                    <template v-if="lineIndex < highlightedLines.length - 1">{{ '\n' }}</template>
+                  </template>
+                </div>
                 <pre v-else><code>{{ fileResult.content ?? '' }}</code></pre>
               </div>
             </template>

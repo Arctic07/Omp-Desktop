@@ -1,24 +1,29 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 
 import type { SourceSettingsAgentModesCopy } from '../../i18n'
+import { useAppSettings } from '../../stores/appSettings'
 import { AppIcon } from '../icons'
 
 const props = defineProps<{
   copy: SourceSettingsAgentModesCopy
 }>()
 
-const defaultMode = ref(props.copy.modes[0]?.id ?? '')
-const enabledModes = ref(new Set(props.copy.modes.map((mode) => mode.id)))
+const { settings, setDefaultAgentMode, setEnabledAgentModes } = useAppSettings()
+const defaultMode = computed<string>({
+  get: () => settings.defaultAgentMode,
+  set: setDefaultAgentMode,
+})
+const enabledModes = computed<Set<string>>(() => new Set(settings.enabledAgentModes))
 
-function toggleMode(modeId: string) {
+function toggleMode(modeId: string): void {
   const nextModes = new Set(enabledModes.value)
   if (nextModes.has(modeId)) {
     nextModes.delete(modeId)
   } else {
     nextModes.add(modeId)
   }
-  enabledModes.value = nextModes
+  setEnabledAgentModes([...nextModes])
 }
 </script>
 

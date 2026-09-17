@@ -1,34 +1,36 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 
-import type { SourceSettingsSessionsCopy } from '../../i18n'
+import type { SourceSessionRetention, SourceSettingsSessionsCopy } from '../../i18n'
+import { useAppSettings } from '../../stores/appSettings'
 import { AppIcon } from '../icons'
 
 const props = defineProps<{
   copy: SourceSettingsSessionsCopy
 }>()
 
-const autoArchive = ref(true)
-const confirmDelete = ref(true)
-const restoreLast = ref(true)
-const retention = ref('never')
-
-function toggleAutoArchive() {
-  autoArchive.value = !autoArchive.value
-}
-
-function toggleConfirmDelete() {
-  confirmDelete.value = !confirmDelete.value
-}
-
-function toggleRestoreLast() {
-  restoreLast.value = !restoreLast.value
-}
+const { settings, setSessionOptions } = useAppSettings()
+const autoArchive = computed<boolean>({
+  get: () => settings.autoArchive,
+  set: (value) => setSessionOptions({ autoArchive: value }),
+})
+const confirmDelete = computed<boolean>({
+  get: () => settings.confirmDelete,
+  set: (value) => setSessionOptions({ confirmDelete: value }),
+})
+const restoreLast = computed<boolean>({
+  get: () => settings.restoreLastSession,
+  set: (value) => setSessionOptions({ restoreLastSession: value }),
+})
+const retention = computed<SourceSessionRetention>({
+  get: () => settings.sessionRetention,
+  set: (value) => setSessionOptions({ sessionRetention: value }),
+})
 </script>
 
 <template>
   <div class="omp-settings-stack">
-    <section class="omp-settings-group" :aria-labelledby="'omp-settings-sessions-behavior'">
+    <section class="omp-settings-group" aria-labelledby="omp-settings-sessions-behavior">
       <div class="omp-settings-group-heading">
         <h3 id="omp-settings-sessions-behavior">{{ props.copy.behaviorTitle }}</h3>
         <p>{{ props.copy.behaviorDescription }}</p>
@@ -48,14 +50,14 @@ function toggleRestoreLast() {
             type="button"
             :aria-label="`${props.copy.autoArchiveTitle}: ${autoArchive ? props.copy.enabledLabel : props.copy.disabledLabel}`"
             :aria-pressed="autoArchive"
-            @click="toggleAutoArchive"
+            @click="autoArchive = !autoArchive"
           >
             <span />
           </button>
         </div>
         <div class="omp-settings-row">
           <div class="omp-settings-row-copy omp-settings-row-copy-with-icon">
-            <span class="omp-settings-row-icon" aria-hidden="true"><AppIcon name="trash-2" :size="16" /></span>
+            <span class="omp-settings-row-icon" aria-hidden="true"><AppIcon name="shield" :size="16" /></span>
             <span>
               <strong>{{ props.copy.confirmDeleteTitle }}</strong>
               <span>{{ props.copy.confirmDeleteDescription }}</span>
@@ -67,7 +69,7 @@ function toggleRestoreLast() {
             type="button"
             :aria-label="`${props.copy.confirmDeleteTitle}: ${confirmDelete ? props.copy.enabledLabel : props.copy.disabledLabel}`"
             :aria-pressed="confirmDelete"
-            @click="toggleConfirmDelete"
+            @click="confirmDelete = !confirmDelete"
           >
             <span />
           </button>
@@ -86,15 +88,18 @@ function toggleRestoreLast() {
             type="button"
             :aria-label="`${props.copy.restoreTitle}: ${restoreLast ? props.copy.enabledLabel : props.copy.disabledLabel}`"
             :aria-pressed="restoreLast"
-            @click="toggleRestoreLast"
+            @click="restoreLast = !restoreLast"
           >
             <span />
           </button>
         </div>
         <div class="omp-settings-row">
-          <div class="omp-settings-row-copy">
-            <strong>{{ props.copy.retentionTitle }}</strong>
-            <span>{{ props.copy.retentionDescription }}</span>
+          <div class="omp-settings-row-copy omp-settings-row-copy-with-icon">
+            <span class="omp-settings-row-icon" aria-hidden="true"><AppIcon name="clock" :size="16" /></span>
+            <span>
+              <strong>{{ props.copy.retentionTitle }}</strong>
+              <span>{{ props.copy.retentionDescription }}</span>
+            </span>
           </div>
           <label class="omp-settings-select-wrap">
             <span class="omp-settings-visually-hidden">{{ props.copy.retentionTitle }}</span>
@@ -103,7 +108,7 @@ function toggleRestoreLast() {
                 {{ option.label }}
               </option>
             </select>
-            <AppIcon name="chevron-down" :size="14" />
+            <AppIcon name="chevron-down" :size="14" aria-hidden="true" />
           </label>
         </div>
       </div>

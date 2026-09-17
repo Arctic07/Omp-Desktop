@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, type CSSProperties, type VNodeRef } from 'vue'
+import { computed, ref } from 'vue'
 
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
@@ -7,46 +7,58 @@ import { useAppSettings } from '../stores/appSettings'
 import { AppIcon } from './icons'
 import SourceTrajectoryRow from './SourceTrajectoryRow.vue'
 import {
-  SOURCE_TRAJECTORY_TIMELINE,
-  SOURCE_TRAJECTORY_TURNS,
+  createTrajectoryLedgerRows,
   type SourceTrajectoryLedgerRow,
   type SourceTrajectoryTimelineSpan,
+  type SourceTrajectoryTurn,
 } from './sourceTrajectoryData'
+
+const props = withDefaults(defineProps<{
+  turns?: readonly SourceTrajectoryTurn[]
+  timeline?: readonly SourceTrajectoryTimelineSpan[]
+  tokenCount?: number
+}>(), {
+  turns: () => [],
+  timeline: () => [],
+  tokenCount: 0,
+})
 
 const { copy } = useAppSettings()
 const ledgerScroll = ref<HTMLElement | null>(null)
 
-const ledgerRows = computed<readonly SourceTrajectoryLedgerRow[]>(() => {
-  const rows: SourceTrajectoryLedgerRow[] = [{ key: 'system', type: 'system' }]
-  for (const turn of SOURCE_TRAJECTORY_TURNS) {
-    rows.push({ key: `turn-${turn.turn}`, type: 'turn', turn })
-    for (const group of turn.groups) {
-      rows.push({ key: `group-${turn.turn}-${group.id}`, type: 'group', group })
-      for (const record of group.records) {
-        rows.push({ key: `record-${record.id}`, type: 'record', record })
-      }
-    }
-  }
-  return rows
-})
-
+const ledgerRows = computed<readonly SourceTrajectoryLedgerRow[]>(() => (
+  createTrajectoryLedgerRows(props.turns)
+))
 const recordStats = computed(() => {
   let records = 0
   let calls = 0
   for (const row of ledgerRows.value) {
-    if (row.type !== 'record') continue
+    if (row.type !== 'record') {
+      continue
+    }
     records += 1
-    if (row.record.kind === 'tool') calls += 1
+    if (row.record.kind === 'tool') {
+      calls += 1
+    }
   }
-  return { records, calls }
+  const tokens = props.tokenCount >= 1000 ? `${(props.tokenCount / 1000).toFixed(1)}K` : String(props.tokenCount)
+  return { records, calls, tokens }
 })
 
 function estimateLedgerRowSize(index: number): number {
   const row = ledgerRows.value[index]
-  if (row === undefined) return 34
-  if (row.type === 'system') return 36
-  if (row.type === 'turn') return 40
-  if (row.type === 'group') return 32
+  if (row === undefined) {
+    return 34
+  }
+  if (row.type === 'system') {
+    return 36
+  }
+  if (row.type === 'turn') {
+    return 40
+  }
+  if (row.type === 'group') {
+    return 32
+  }
   return 34
 }
 
@@ -64,35 +76,32 @@ const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(computed(() => ({
   useAnimationFrameWithResizeObserver: true,
   scrollEndThreshold: 96,
 })))
-const measureTrajectoryElement: VNodeRef = (node) => {
-  if (node instanceof HTMLElement) virtualizer.value.measureElement(node)
-}
 
 const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((virtualRow) => {
   const row = ledgerRows.value[virtualRow.index]
   return row === undefined ? [] : [{ ...virtualRow, row }]
 }))
-const totalSize = computed(() => virtualizer.value.getTotalSize())
+const totalSize = computed<number>(() => virtualizer.value.getTotalSize())
 
 const timelineLanes = computed(() => [
   {
     key: 'input',
     label: copy.value.trajectory.input,
-    spans: SOURCE_TRAJECTORY_TIMELINE.filter(span => span.lane === 'input'),
+    spans: props.timeline.filter((span) => span.lane === 'input'),
   },
   {
     key: 'model',
     label: copy.value.trajectory.model,
-    spans: SOURCE_TRAJECTORY_TIMELINE.filter(span => span.lane === 'model'),
+    spans: props.timeline.filter((span) => span.lane === 'model'),
   },
   {
     key: 'tools',
     label: copy.value.trajectory.tools,
-    spans: SOURCE_TRAJECTORY_TIMELINE.filter(span => span.lane === 'tools'),
+    spans: props.timeline.filter((span) => span.lane === 'tools'),
   },
 ])
 
-type TrajectorySpanStyle = CSSProperties & {
+interface TrajectorySpanStyle {
   '--omp-trajectory-span-left': string
   '--omp-trajectory-span-width': string
 }
@@ -104,7 +113,7 @@ function spanStyle(span: SourceTrajectoryTimelineSpan): TrajectorySpanStyle {
   }
 }
 
-type TrajectoryRowStyle = CSSProperties & {
+interface TrajectoryRowStyle {
   '--omp-trajectory-row-offset': string
   '--omp-trajectory-row-height': string
 }
@@ -125,66 +134,72 @@ function rowStyle(row: { start: number; size: number }): TrajectoryRowStyle {
         <strong>{{ copy.trajectory.overview }}</strong>
       </div>
       <div class="omp-trajectory-toolbar-summary">
-        <span><strong>{{ SOURCE_TRAJECTORY_TURNS.length }}</strong> {{ copy.trajectory.turn }}</span>
+        <span><strong>{{ props.turns.length }}</strong> {{ copy.trajectory.turn }}</span>
         <span><strong>{{ recordStats.records }}</strong> {{ copy.trajectory.records }}</span>
         <span><strong>{{ recordStats.calls }}</strong> {{ copy.trajectory.calls }}</span>
-        <span><strong>28.1K</strong> {{ copy.trajectory.tokens }}</span>
+        <span><strong>{{ recordStats.tokens }}</strong> {{ copy.trajectory.tokens }}</span>
       </div>
     </div>
 
-    <section class="omp-trajectory-overview" :aria-label="copy.trajectory.overviewAria">
-      <div class="omp-trajectory-overview-plot">
-        <div class="omp-trajectory-overview-labels" aria-hidden="true">
-          <span v-for="lane in timelineLanes" :key="lane.key">{{ lane.label }}</span>
-        </div>
-        <div class="omp-trajectory-overview-track" aria-hidden="true">
-          <div
-            v-for="lane in timelineLanes"
-            :key="lane.key"
-            class="omp-trajectory-overview-lane"
-            :data-lane="lane.key"
-          >
-            <span
-              v-for="span in lane.spans"
-              :key="span.id"
-              class="omp-trajectory-overview-span"
-              :class="`omp-trajectory-overview-span-${span.kind}`"
-              :data-state="span.state"
-              :style="spanStyle(span)"
-            />
-          </div>
-        </div>
-      </div>
-      <div class="omp-trajectory-overview-scale" aria-hidden="true">
-        <span>0s</span>
-        <span>3s</span>
-        <span>6s</span>
-        <span>9s</span>
-      </div>
+    <section v-if="props.turns.length === 0" class="omp-trajectory-empty" role="status">
+      <AppIcon name="activity" :size="22" aria-hidden="true" />
+      <strong>{{ copy.trajectory.empty }}</strong>
     </section>
+    <template v-else>
+      <section class="omp-trajectory-overview" :aria-label="copy.trajectory.overviewAria">
+        <div class="omp-trajectory-overview-plot">
+          <div class="omp-trajectory-overview-labels" aria-hidden="true">
+            <span v-for="lane in timelineLanes" :key="lane.key">{{ lane.label }}</span>
+          </div>
+          <div class="omp-trajectory-overview-track" aria-hidden="true">
+            <div
+              v-for="lane in timelineLanes"
+              :key="lane.key"
+              class="omp-trajectory-overview-lane"
+              :data-lane="lane.key"
+            >
+              <span
+                v-for="span in lane.spans"
+                :key="span.id"
+                class="omp-trajectory-overview-span"
+                :class="`omp-trajectory-overview-span-${span.kind}`"
+                :data-state="span.state"
+                :style="spanStyle(span)"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="omp-trajectory-overview-scale" aria-hidden="true">
+          <span>0s</span>
+          <span>3s</span>
+          <span>6s</span>
+          <span>9s</span>
+        </div>
+      </section>
 
-    <div class="omp-trajectory-ledger">
-      <div class="omp-trajectory-ledger-head" aria-hidden="true">
-        <span>{{ copy.trajectory.event }}</span>
-        <span>{{ copy.trajectory.content }}</span>
-      </div>
-      <div ref="ledgerScroll" class="omp-trajectory-ledger-scroll">
-        <div
-          class="omp-trajectory-ledger-spacer"
-          :style="{ '--omp-trajectory-total-size': `${totalSize}px` }"
-        >
+      <div class="omp-trajectory-ledger">
+        <div class="omp-trajectory-ledger-head" aria-hidden="true">
+          <span>{{ copy.trajectory.event }}</span>
+          <span>{{ copy.trajectory.content }}</span>
+        </div>
+        <div ref="ledgerScroll" class="omp-trajectory-ledger-scroll">
           <div
-            v-for="virtualRow in virtualRows"
-            :key="getLedgerRowKey(virtualRow.index)"
-            class="omp-trajectory-virtual-row"
-            :data-row-type="virtualRow.row.type"
-            :style="rowStyle(virtualRow)"
-            :ref="measureTrajectoryElement"
+            class="omp-trajectory-ledger-spacer"
+            :style="{ '--omp-trajectory-total-size': `${totalSize}px` }"
           >
-            <SourceTrajectoryRow :row="virtualRow.row" />
+            <div
+              v-for="virtualRow in virtualRows"
+              :key="virtualRow.key"
+              class="omp-trajectory-virtual-row"
+              :data-row-type="virtualRow.row.type"
+              :style="rowStyle(virtualRow)"
+              :ref="virtualizer.measureElement"
+            >
+              <SourceTrajectoryRow :row="virtualRow.row" />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </section>
 </template>

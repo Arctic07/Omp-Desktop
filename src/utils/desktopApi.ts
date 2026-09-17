@@ -1,4 +1,17 @@
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWebview, type DragDropEvent } from '@tauri-apps/api/webview'
+import { open } from '@tauri-apps/plugin-dialog'
+
+import type { ModelEditorModel } from './modelSettings'
+
+export interface DesktopApiError {
+  code: string
+  message: string
+}
+
+export interface ModelCatalogResponse {
+  models: ModelEditorModel[]
+}
 
 export type FileEntryKind = 'dir' | 'file'
 
@@ -55,6 +68,7 @@ export type ReviewDiffTarget = {
   section: 'staged' | 'unstaged'
   file: ReviewFile
 }
+
 export interface WorkspaceSearchMatch {
   kind: 'path' | 'content'
   path: string
@@ -73,8 +87,15 @@ export interface RevealWorkspaceFileResult {
   ok: boolean
 }
 
+export type DesktopDragDropEvent = DragDropEvent
+
 export interface DesktopApi {
   currentWorkingDirectory: () => Promise<string>
+  chooseWorkspace: (title: string) => Promise<string | null>
+  chooseFiles: (title: string) => Promise<string[]>
+  currentWindowScaleFactor: () => Promise<number>
+  listenDesktopDragDrop: (handler: (event: DesktopDragDropEvent) => void) => Promise<() => void>
+  fetchModelCatalog: (endpoint: string, apiKey: string) => Promise<ModelCatalogResponse>
   listWorkspaceEntries: (root: string, path: string) => Promise<FileEntry[]>
   readWorkspaceFile: (root: string, path: string) => Promise<FileReadResult>
   revealWorkspaceFile: (root: string, path: string) => Promise<RevealWorkspaceFileResult>
@@ -87,8 +108,52 @@ export interface DesktopApi {
   searchWorkspaceFiles: (root: string, query: string, maxResults?: number) => Promise<WorkspaceSearchResult>
 }
 
+export function isDesktopApiError(value: unknown): value is DesktopApiError {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+  return typeof candidate.code === 'string' && typeof candidate.message === 'string'
+}
+
+export function formatDesktopError(error: unknown, fallback: string): string {
+  if (isDesktopApiError(error)) {
+    return error.message
+  }
+  if (typeof error === 'string' && error.trim()) {
+    return error
+  }
+  return fallback
+}
+
 export async function currentWorkingDirectory(): Promise<string> {
   return invoke<string>('current_working_directory')
+}
+
+export async function chooseWorkspace(title: string): Promise<string | null> {
+  const selectedPath = await open({ directory: true, multiple: false, title })
+  return typeof selectedPath === 'string' ? selectedPath : null
+}
+
+export async function chooseFiles(title: string): Promise<string[]> {
+  const selectedPaths = await open({ directory: false, multiple: true, title })
+  return Array.isArray(selectedPaths) ? selectedPaths : selectedPaths === null ? [] : [selectedPaths]
+}
+
+export async function currentWindowScaleFactor(): Promise<number> {
+  const scaleFactor = await getCurrentWebview().window.scaleFactor()
+  return scaleFactor > 0 ? scaleFactor : 1
+}
+
+export async function listenDesktopDragDrop(
+  handler: (event: DesktopDragDropEvent) => void,
+): Promise<() => void> {
+  return getCurrentWebview().onDragDropEvent((event) => handler(event.payload))
+}
+
+export async function fetchModelCatalog(endpoint: string, apiKey: string): Promise<ModelCatalogResponse> {
+  return invoke<ModelCatalogResponse>('fetch_model_candidates', { endpoint, api_key: apiKey })
 }
 
 export async function listWorkspaceEntries(root: string, path: string): Promise<FileEntry[]> {
@@ -142,6 +207,11 @@ export async function searchWorkspaceFiles(
 
 export const desktopApi: DesktopApi = {
   currentWorkingDirectory,
+  chooseWorkspace,
+  chooseFiles,
+  currentWindowScaleFactor,
+  listenDesktopDragDrop,
+  fetchModelCatalog,
   listWorkspaceEntries,
   readWorkspaceFile,
   revealWorkspaceFile,

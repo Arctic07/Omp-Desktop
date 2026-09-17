@@ -1,30 +1,36 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 
-import type { SourceSettingsAppearanceCopy } from '../../i18n'
+import type { SourceSettingsAppearanceCopy, SourceAccentColor, SourceInterfaceDensity } from '../../i18n'
+import { useAppSettings } from '../../stores/appSettings'
 import { AppIcon } from '../icons'
 
 const props = defineProps<{
   copy: SourceSettingsAppearanceCopy
 }>()
 
-const accent = ref('blue')
-const density = ref('standard')
-const reduceMotion = ref(false)
-const highContrast = ref(false)
-
-function toggleReduceMotion() {
-  reduceMotion.value = !reduceMotion.value
-}
-
-function toggleHighContrast() {
-  highContrast.value = !highContrast.value
-}
+const { settings, setAppearanceOptions } = useAppSettings()
+const accent = computed<SourceAccentColor>({
+  get: () => settings.accent,
+  set: (value) => setAppearanceOptions({ accent: value }),
+})
+const density = computed<SourceInterfaceDensity>({
+  get: () => settings.interfaceDensity,
+  set: (value) => setAppearanceOptions({ interfaceDensity: value }),
+})
+const reduceMotion = computed<boolean>({
+  get: () => settings.reduceMotion,
+  set: (value) => setAppearanceOptions({ reduceMotion: value }),
+})
+const highContrast = computed<boolean>({
+  get: () => settings.highContrast,
+  set: (value) => setAppearanceOptions({ highContrast: value }),
+})
 </script>
 
 <template>
   <div class="omp-settings-stack">
-    <section class="omp-settings-group" :aria-labelledby="'omp-settings-appearance-accent'">
+    <section class="omp-settings-group" aria-labelledby="omp-settings-appearance-accent">
       <div class="omp-settings-group-heading">
         <h3 id="omp-settings-appearance-accent">{{ props.copy.accentTitle }}</h3>
         <p>{{ props.copy.accentDescription }}</p>
@@ -75,7 +81,7 @@ function toggleHighContrast() {
       </div>
     </section>
 
-    <section class="omp-settings-group" :aria-labelledby="'omp-settings-appearance-accessibility'">
+    <section class="omp-settings-group" aria-labelledby="omp-settings-appearance-accessibility">
       <div class="omp-settings-group-heading">
         <h3 id="omp-settings-appearance-accessibility">{{ props.copy.motionTitle }}</h3>
         <p>{{ props.copy.motionDescription }}</p>
@@ -95,7 +101,7 @@ function toggleHighContrast() {
             type="button"
             :aria-label="`${props.copy.motionTitle}: ${reduceMotion ? props.copy.enabledLabel : props.copy.disabledLabel}`"
             :aria-pressed="reduceMotion"
-            @click="toggleReduceMotion"
+            @click="reduceMotion = !reduceMotion"
           >
             <span />
           </button>
@@ -114,7 +120,7 @@ function toggleHighContrast() {
             type="button"
             :aria-label="`${props.copy.contrastTitle}: ${highContrast ? props.copy.enabledLabel : props.copy.disabledLabel}`"
             :aria-pressed="highContrast"
-            @click="toggleHighContrast"
+            @click="highContrast = !highContrast"
           >
             <span />
           </button>

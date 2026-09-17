@@ -1,6 +1,10 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
-import { getCurrentWebview, type DragDropEvent, type Webview } from '@tauri-apps/api/webview'
+import {
+  currentWindowScaleFactor,
+  listenDesktopDragDrop,
+  type DesktopDragDropEvent,
+} from '../utils/desktopApi'
 
 export type DesktopDropPathKind = 'file' | 'directory' | 'unknown'
 
@@ -38,15 +42,18 @@ export interface DesktopFileDropState {
 }
 
 function isInsideElement(element: HTMLElement | null, x: number, y: number): boolean {
-  if (element === null) return false
+  if (element === null) {
+    return false
+  }
   const rect = element.getBoundingClientRect()
   return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
 }
 
 function decodeFileUrl(value: string): string | null {
   const trimmed = value.trim()
-  if (trimmed.length === 0 || trimmed.startsWith('#')) return null
-  if (!trimmed.toLowerCase().startsWith('file://')) return null
+  if (trimmed.length === 0 || trimmed.startsWith('#') || !trimmed.toLowerCase().startsWith('file://')) {
+    return null
+  }
 
   try {
     const url = new URL(trimmed)
@@ -61,24 +68,33 @@ function decodeFileUrl(value: string): string | null {
 }
 
 function pathFromFile(file: File | null, fallbackToName = false): string | null {
-  if (file === null) return null
+  if (file === null) {
+    return null
+  }
   const candidate = file as FileWithPath
-  if (typeof candidate.path === 'string' && candidate.path.trim().length > 0) return candidate.path
-  if (fallbackToName && file.name.trim().length > 0) return file.name
-  return null
+  if (typeof candidate.path === 'string' && candidate.path.trim().length > 0) {
+    return candidate.path
+  }
+  return fallbackToName && file.name.trim().length > 0 ? file.name : null
 }
 
 function pathsFromDomDrop(event: DragEvent): DesktopDropPath[] {
   const transfer = event.dataTransfer
-  if (transfer === null) return []
+  if (transfer === null) {
+    return []
+  }
 
   const paths: DesktopDropPath[] = []
   const seen = new Set<string>()
   const addPath = (path: string | null, kind: DesktopDropPathKind): void => {
-    if (path === null || path.trim().length === 0) return
+    if (path === null || path.trim().length === 0) {
+      return
+    }
     const normalized = path.trim()
     const key = normalized.replaceAll('\\', '/').toLocaleLowerCase()
-    if (seen.has(key)) return
+    if (seen.has(key)) {
+      return
+    }
     seen.add(key)
     paths.push({ path: normalized, kind })
   }
@@ -94,21 +110,28 @@ function pathsFromDomDrop(event: DragEvent): DesktopDropPath[] {
     }
   }
 
-  for (const file of Array.from(transfer.files)) addPath(pathFromFile(file, true), 'file')
-
-  for (const value of transfer.getData('text/uri-list').split('\n')) addPath(decodeFileUrl(value), 'file')
+  for (const file of Array.from(transfer.files)) {
+    addPath(pathFromFile(file, true), 'file')
+  }
+  for (const value of transfer.getData('text/uri-list').split('\n')) {
+    addPath(decodeFileUrl(value), 'file')
+  }
   return paths
 }
 
 function isDragTransfer(event: DragEvent): boolean {
   const transfer = event.dataTransfer
-  if (transfer === null) return false
+  if (transfer === null) {
+    return false
+  }
   const types = transfer.types
   return transfer.files.length > 0 || (types !== undefined && (types.includes('Files') || types.includes('text/uri-list')))
 }
 
-function isInsideDesktopDrop(element: HTMLElement | null, event: DragDropEvent, scaleFactor: number): boolean {
-  if (event.type === 'leave') return false
+function isInsideDesktopDrop(element: HTMLElement | null, event: DesktopDragDropEvent, scaleFactor: number): boolean {
+  if (event.type === 'leave') {
+    return false
+  }
   return isInsideElement(element, event.position.x / scaleFactor, event.position.y / scaleFactor)
 }
 
@@ -118,7 +141,7 @@ export function useDesktopFileDrop(target: Ref<HTMLElement | null>, onDrop: Desk
   let disposed = false
   let scaleFactor = 1
 
-  function updateDraggingFromDesktopEvent(event: DragDropEvent): void {
+  function updateDraggingFromDesktopEvent(event: DesktopDragDropEvent): void {
     const inside = isInsideDesktopDrop(target.value, event, scaleFactor)
     if (event.type === 'enter' || event.type === 'over') {
       dragging.value = inside
@@ -135,17 +158,21 @@ export function useDesktopFileDrop(target: Ref<HTMLElement | null>, onDrop: Desk
   }
 
   function handleDragOver(event: DragEvent): void {
-    if (!isDragTransfer(event)) return
-    if (!isInsideElement(target.value, event.clientX, event.clientY)) return
+    if (!isDragTransfer(event) || !isInsideElement(target.value, event.clientX, event.clientY)) {
+      return
+    }
     event.preventDefault()
     event.stopPropagation()
-    if (event.dataTransfer !== null) event.dataTransfer.dropEffect = 'copy'
+    if (event.dataTransfer !== null) {
+      event.dataTransfer.dropEffect = 'copy'
+    }
     dragging.value = true
   }
 
   function handleDrop(event: DragEvent): void {
-    if (!isDragTransfer(event)) return
-    if (!isInsideElement(target.value, event.clientX, event.clientY)) return
+    if (!isDragTransfer(event) || !isInsideElement(target.value, event.clientX, event.clientY)) {
+      return
+    }
     event.preventDefault()
     event.stopPropagation()
     dragging.value = false
@@ -154,29 +181,25 @@ export function useDesktopFileDrop(target: Ref<HTMLElement | null>, onDrop: Desk
 
   function handleDragLeave(event: DragEvent): void {
     const relatedTarget = event.relatedTarget
-    if (relatedTarget instanceof Node && target.value?.contains(relatedTarget)) return
+    if (relatedTarget instanceof Node && target.value?.contains(relatedTarget)) {
+      return
+    }
     dragging.value = false
   }
 
   onMounted(() => {
-    let webview: Webview
-    try {
-      webview = getCurrentWebview()
-    } catch {
-      return
-    }
-
-    void webview.window.scaleFactor().then((factor) => {
-      scaleFactor = factor > 0 ? factor : 1
+    void currentWindowScaleFactor().then((factor) => {
+      scaleFactor = factor
     }).catch(() => {
       scaleFactor = 1
     })
 
-    void webview.onDragDropEvent((event) => {
-      updateDraggingFromDesktopEvent(event.payload)
-    }).then((unlisten) => {
-      if (disposed) unlisten()
-      else desktopUnlisten = unlisten
+    void listenDesktopDragDrop(updateDraggingFromDesktopEvent).then((unlisten) => {
+      if (disposed) {
+        unlisten()
+      } else {
+        desktopUnlisten = unlisten
+      }
     }).catch(() => {
       desktopUnlisten = null
     })

@@ -1,19 +1,13 @@
-<script setup lang='ts'>
+<script setup lang="ts">
 import { ref } from 'vue'
 
 import type { SourceSettingsModelsCopy } from '../../i18n'
+import type { ModelEditorModel } from '../../utils/modelSettings'
 import { AppIcon } from '../icons'
-
-export interface ModelEditorModel {
-  id: string
-  name?: string
-  capacity?: string
-}
 
 const props = defineProps<{
   copy: SourceSettingsModelsCopy
   models: readonly ModelEditorModel[]
-  defaultModels: readonly ModelEditorModel[]
   fetching: boolean
   fetchError: string
   validationError: string
@@ -28,11 +22,12 @@ const emit = defineEmits<{
 
 const expandedRows = ref<Set<number>>(new Set())
 
-function inputValue(event: Event) {
-  return (event.target as HTMLInputElement).value
+function inputValue(event: Event): string {
+  const target = event.currentTarget
+  return target instanceof HTMLInputElement ? target.value : ''
 }
 
-function updateModel(index: number, field: 'id' | 'name' | 'capacity', value: string) {
+function updateModel(index: number, field: 'id' | 'name' | 'capacity', value: string): void {
   const models = props.models.map((model, modelIndex) => {
     if (modelIndex !== index) {
       return { ...model }
@@ -50,7 +45,7 @@ function updateModel(index: number, field: 'id' | 'name' | 'capacity', value: st
   emit('update:models', models)
 }
 
-function removeModel(index: number) {
+function removeModel(index: number): void {
   emit('update:models', props.models.filter((_, modelIndex) => modelIndex !== index).map((model) => ({ ...model })))
   const nextExpanded = new Set<number>()
   expandedRows.value.forEach((row) => {
@@ -63,7 +58,7 @@ function removeModel(index: number) {
   expandedRows.value = nextExpanded
 }
 
-function toggleExpanded(index: number) {
+function toggleExpanded(index: number): void {
   const nextExpanded = new Set(expandedRows.value)
   if (nextExpanded.has(index)) {
     nextExpanded.delete(index)

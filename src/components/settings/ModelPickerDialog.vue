@@ -1,10 +1,11 @@
-<script setup lang='ts'>
+<script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import type { SourceSettingsModelsCopy, SourceSettingsModel } from '../../i18n'
+import type { SourceSettingsModelsCopy } from '../../i18n'
+import type { ModelEditorModel } from '../../utils/modelSettings'
 import { AppIcon } from '../icons'
 
-export interface ModelPickerCandidate extends SourceSettingsModel {}
+export type ModelPickerCandidate = ModelEditorModel
 
 const props = defineProps<{
   copy: SourceSettingsModelsCopy['picker']
@@ -21,23 +22,27 @@ const emit = defineEmits<{
 const searchQuery = ref('')
 const selectedIds = ref<Set<string>>(new Set())
 
-const filteredCandidates = computed(() => {
+const filteredCandidates = computed<readonly ModelPickerCandidate[]>(() => {
   const query = searchQuery.value.trim().toLocaleLowerCase()
   if (!query) {
     return props.candidates
   }
-  return props.candidates.filter((candidate) => `${candidate.id} ${candidate.name ?? ''}`.toLocaleLowerCase().includes(query))
+  return props.candidates.filter((candidate) => (
+    `${candidate.id} ${candidate.name ?? ''}`.toLocaleLowerCase().includes(query)
+  ))
 })
 
-const allVisibleSelected = computed(() => {
+const allVisibleSelected = computed<boolean>(() => {
   const visible = filteredCandidates.value
   return visible.length > 0 && visible.every((candidate) => selectedIds.value.has(candidate.id))
 })
 
-function resetSelection() {
+function resetSelection(): void {
   searchQuery.value = ''
   const existingIds = new Set(props.existingIds)
-  selectedIds.value = new Set(props.candidates.filter((candidate) => !existingIds.has(candidate.id)).map((candidate) => candidate.id))
+  selectedIds.value = new Set(
+    props.candidates.filter((candidate) => !existingIds.has(candidate.id)).map((candidate) => candidate.id),
+  )
 }
 
 watch(
@@ -50,7 +55,7 @@ watch(
   { deep: true },
 )
 
-function toggleCandidate(candidateId: string) {
+function toggleCandidate(candidateId: string): void {
   const next = new Set(selectedIds.value)
   if (next.has(candidateId)) {
     next.delete(candidateId)
@@ -60,7 +65,7 @@ function toggleCandidate(candidateId: string) {
   selectedIds.value = next
 }
 
-function toggleVisibleCandidates() {
+function toggleVisibleCandidates(): void {
   const next = new Set(selectedIds.value)
   if (allVisibleSelected.value) {
     filteredCandidates.value.forEach((candidate) => next.delete(candidate.id))
@@ -70,7 +75,7 @@ function toggleVisibleCandidates() {
   selectedIds.value = next
 }
 
-function addSelectedModels() {
+function addSelectedModels(): void {
   emit('add', props.candidates.filter((candidate) => selectedIds.value.has(candidate.id)))
 }
 </script>

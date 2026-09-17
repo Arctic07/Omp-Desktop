@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
+
+import { copyText } from '../utils/clipboard'
 
 interface SourceTerminalBlockProps {
   command: string
@@ -8,6 +10,7 @@ interface SourceTerminalBlockProps {
   status?: 'success' | 'running' | 'error'
   copyLabel?: string
   copiedLabel?: string
+  copyFailedLabel?: string
   emptyLabel?: string
 }
 
@@ -17,24 +20,42 @@ const props = withDefaults(defineProps<SourceTerminalBlockProps>(), {
   status: 'success',
   copyLabel: 'Copy',
   copiedLabel: 'Copied',
+  copyFailedLabel: 'Copy failed',
   emptyLabel: 'No output',
 })
 
 const copied = ref(false)
+const copyError = ref(false)
+let copyTimer: number | null = null
+
+function clearCopyTimer(): void {
+  if (copyTimer === null) {
+    return
+  }
+  window.clearTimeout(copyTimer)
+  copyTimer = null
+}
 
 async function copyTerminal(): Promise<void> {
-  try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard !== undefined) {
-      await navigator.clipboard.writeText([props.command, props.output].filter(Boolean).join('\n'))
-    }
-    copied.value = true
-  } catch {
-    copied.value = false
+  clearCopyTimer()
+  copied.value = false
+  copyError.value = false
+  const value = [props.command, props.output].filter(Boolean).join('\n')
+  if (!(await copyText(value))) {
+    copyError.value = true
+    return
   }
-  window.setTimeout(() => {
+
+  copied.value = true
+  copyTimer = window.setTimeout(() => {
     copied.value = false
+    copyTimer = null
   }, 1600)
 }
+
+onUnmounted(() => {
+  clearCopyTimer()
+})
 </script>
 
 <template>
@@ -47,13 +68,20 @@ async function copyTerminal(): Promise<void> {
           <span class="omp-source-terminal-command">{{ props.command }}</span>
         </div>
       </div>
-      <button v-if="props.status !== 'running' && props.output" class="omp-source-terminal-copy" type="button" @click="copyTerminal">
+      <button
+        v-if="props.status !== 'running' && props.output"
+        class="omp-source-terminal-copy"
+        type="button"
+        :aria-label="copied ? props.copiedLabel : props.copyLabel"
+        @click="copyTerminal"
+      >
         {{ copied ? props.copiedLabel : props.copyLabel }}
       </button>
     </header>
     <pre v-if="props.status !== 'running' && props.output" class="omp-source-terminal-output"><code>{{ props.output }}</code></pre>
     <div v-else-if="props.status === 'running'" class="omp-source-terminal-running">{{ props.output }}</div>
     <div v-else class="omp-source-terminal-empty">{{ props.emptyLabel }}</div>
+    <p v-if="copyError" class="omp-source-terminal-copy-error" role="alert">{{ props.copyFailedLabel }}</p>
   </section>
 </template>
 
@@ -184,6 +212,13 @@ async function copyTerminal(): Promise<void> {
 @keyframes omp-source-terminal-pulse {
   from { opacity: 0.35; }
   to { opacity: 1; }
+}
+
+.omp-source-terminal-copy-error {
+  margin: 0;
+  padding: 6px 14px 9px 0;
+  color: var(--dsw-alias-state-error-primary);
+  font: 11px/16px var(--omp-font-family);
 }
 
 @media (prefers-reduced-motion: reduce) {

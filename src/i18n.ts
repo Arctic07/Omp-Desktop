@@ -1,3 +1,5 @@
+import { en, zh } from './i18nCopies'
+
 export type SourceSettingsSectionId =
   | 'general'
   | 'models'
@@ -9,6 +11,9 @@ export type SourceSettingsSectionId =
   | 'about'
 
 export type SourcePermissionMode = 'ask' | 'allow' | 'restricted'
+export type SourceAccentColor = 'blue' | 'violet' | 'green' | 'orange'
+export type SourceInterfaceDensity = 'cozy' | 'standard' | 'dense'
+export type SourceSessionRetention = 'never' | '30-days' | '90-days'
 export type SourceLanguage = 'en' | 'zh'
 export type SourceTheme = 'light' | 'dark' | 'system'
 export type SourceConversationDensity = 'comfortable' | 'compact'
@@ -183,7 +188,7 @@ export interface SourceSettingsSessionsCopy {
   restoreDescription: string
   enabledLabel: string
   disabledLabel: string
-  retentionOptions: readonly SourceSettingChoice<string>[]
+  retentionOptions: readonly SourceSettingChoice<SourceSessionRetention>[]
   retentionTitle: string
   retentionDescription: string
 }
@@ -193,10 +198,10 @@ export interface SourceSettingsAppearanceCopy {
   description: string
   accentTitle: string
   accentDescription: string
-  accentOptions: readonly SourceSettingChoice<string>[]
+  accentOptions: readonly SourceSettingChoice<SourceAccentColor>[]
   densityTitle: string
   densityDescription: string
-  densityOptions: readonly SourceSettingChoice<string>[]
+  densityOptions: readonly SourceSettingChoice<SourceInterfaceDensity>[]
   motionTitle: string
   motionDescription: string
   contrastTitle: string
@@ -242,6 +247,7 @@ export interface SourceSettingsCopy {
 interface SourceTrajectoryCopy {
   overview: string
   overviewAria: string
+  empty: string
   event: string
   content: string
   input: string
@@ -274,14 +280,19 @@ export interface SourceCopy {
   clearSearch: string
   viewOptions: string
   addWorkspace: string
+  noWorkspaces: string
   noSessions: string
   noMatches: string
   expandSessions: string
   collapseSessions: string
   addWorkspaceMenu: string
+  expandWorkspace: string
+  collapseWorkspace: string
   heroHeadline: string
   preview: string
   chooseWorkspace: string
+  workspaceLoadFailed: string
+  workspaceSelectionFailed: string
   composerPlaceholder: string
   messagePlaceholder: string
   addFiles: string
@@ -385,6 +396,14 @@ export interface SourceCopy {
   toolOutput: string
   toolCopy: string
   toolCopied: string
+  copyFailed: string
+  toolCalls: string
+  noMessages: string
+  justNow: string
+  duration: string
+  tokensPerSecond: string
+  conversationStats: string
+  localSessionTitle: string
   modelLabel: string
   thinkingLabel: string
   thinkingOptions: readonly SourceSettingChoice<SourceThinkingLevel>[]
@@ -400,8 +419,6 @@ export interface SourceCopy {
   fontSize: string
   fourteenPixels: string
 }
-
-import { en, zh } from './i18nCopies'
 
 export function getSourceCopy(language?: SourceLanguage): SourceCopy {
   const selectedLanguage = language ?? (typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en')

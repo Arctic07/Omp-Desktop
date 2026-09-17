@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 
-import { open } from '@tauri-apps/plugin-dialog'
-
 import type { SourceThinkingLevel } from '../i18n'
 import { useDesktopFileDrop, type DesktopDropPath } from '../composables/useDesktopFileDrop'
 import { useAppSettings } from '../stores/appSettings'
+import type { ConversationSubmitRequest } from '../utils/conversationTypes'
+import { chooseFiles as chooseFilesFromDialog } from '../utils/desktopApi'
 import { AppIcon } from './icons'
-
-const { copy } = useAppSettings()
 
 interface SourceModel {
   id: string
@@ -40,7 +38,7 @@ const modelGroups: readonly SourceModelGroup[] = [
       { id: 'claude-fable-5', name: 'Claude Fable 5', provider: 'command' },
     ],
   },
-] as const
+]
 
 const modelOptions: readonly SourceModel[] = modelGroups.flatMap((group) => group.models)
 type ModelId = string
@@ -51,13 +49,6 @@ interface ComposerAttachment {
   name: string
 }
 
-interface ComposerSubmitPayload {
-  text: string
-  paths: readonly string[]
-  modelId: ModelId
-  thinking: SourceThinkingLevel
-}
-
 const props = defineProps<{
   disabled?: boolean
   workspaceTrigger?: boolean
@@ -65,9 +56,10 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   requestWorkspace: []
-  submit: [payload: ComposerSubmitPayload]
+  submit: [request: ConversationSubmitRequest]
 }>()
 
+const { copy } = useAppSettings()
 const draft = ref('')
 const focused = ref(false)
 const modelMenuOpen = ref(false)
@@ -76,14 +68,18 @@ const selectedModelId = ref<ModelId>('gpt-5.6-luna')
 const selectedThinkingId = ref<SourceThinkingLevel>('high')
 const attachments = ref<ComposerAttachment[]>([])
 const dropNotice = ref('')
-const composerCard = ref<HTMLDivElement | null>(null)
-const composerInput = ref<HTMLDivElement | null>(null)
-const canSend = computed(() => (draft.value.trim().length > 0 || attachments.value.length > 0) && !props.disabled)
-const selectedModel = computed(() => modelOptions.find((model) => model.id === selectedModelId.value) ?? modelOptions[0]!)
-const attachmentLabel = computed(() => copy.value.attachedFiles.replace('{count}', String(attachments.value.length)))
-const selectedThinking = computed(() =>
-  copy.value.thinkingOptions.find((option) => option.value === selectedThinkingId.value) ?? copy.value.thinkingOptions[0],
-)
+const canSend = computed<boolean>(() => (
+  (draft.value.trim().length > 0 || attachments.value.length > 0) && props.disabled !== true
+))
+const selectedModel = computed<SourceModel>(() => (
+  modelOptions.find((model) => model.id === selectedModelId.value) ?? modelOptions[0]!
+))
+const attachmentLabel = computed<string>(() => (
+  copy.value.attachedFiles.replace('{count}', String(attachments.value.length))
+))
+const selectedThinking = computed(() => (
+  copy.value.thinkingOptions.find((option) => option.value === selectedThinkingId.value) ?? copy.value.thinkingOptions[0]
+))
 
 function attachmentKey(path: string): string {
   return path.replaceAll('\\', '/').replace(/\/+$/, '').toLocaleLowerCase()
@@ -100,12 +96,16 @@ function isDirectoryPath(path: string): boolean {
 }
 
 function requestWorkspace(): void {
-  if (props.workspaceTrigger) emit('requestWorkspace')
+  if (props.workspaceTrigger === true) {
+    emit('requestWorkspace')
+  }
 }
 
 function updateDraft(event: Event): void {
   const target = event.currentTarget
-  if (target instanceof HTMLElement) draft.value = target.innerText
+  if (target instanceof HTMLElement) {
+    draft.value = target.innerText
+  }
 }
 
 function openModelMenu(): void {
@@ -119,8 +119,11 @@ function closeModelMenu(): void {
 }
 
 function toggleModelMenu(): void {
-  if (modelMenuOpen.value) closeModelMenu()
-  else openModelMenu()
+  if (modelMenuOpen.value) {
+    closeModelMenu()
+  } else {
+    openModelMenu()
+  }
 }
 
 function enterModelPane(pane: Exclude<ModelMenuPane, 'root'>): void {
@@ -129,13 +132,17 @@ function enterModelPane(pane: Exclude<ModelMenuPane, 'root'>): void {
 
 function selectModel(id: ModelId): void {
   const model = modelOptions.find((option) => option.id === id)
-  if (model !== undefined) selectedModelId.value = model.id
+  if (model !== undefined) {
+    selectedModelId.value = model.id
+  }
   closeModelMenu()
 }
 
 function selectThinking(id: SourceThinkingLevel): void {
   const option = copy.value.thinkingOptions.find((choice) => choice.value === id)
-  if (option !== undefined) selectedThinkingId.value = option.value
+  if (option !== undefined) {
+    selectedThinkingId.value = option.value
+  }
   closeModelMenu()
 }
 
@@ -145,20 +152,26 @@ function removeAttachment(path: string): void {
 }
 
 function addAttachmentPaths(paths: readonly DesktopDropPath[]): void {
-  if (props.disabled) return
+  if (props.disabled === true) {
+    return
+  }
 
   const nextAttachments = [...attachments.value]
   const seen = new Set(nextAttachments.map((attachment) => attachmentKey(attachment.path)))
   let skippedDirectory = false
   for (const item of paths) {
     const path = item.path.trim()
-    if (path.length === 0) continue
+    if (path.length === 0) {
+      continue
+    }
     if (item.kind === 'directory' || isDirectoryPath(path)) {
       skippedDirectory = true
       continue
     }
     const key = attachmentKey(path)
-    if (seen.has(key)) continue
+    if (seen.has(key)) {
+      continue
+    }
     seen.add(key)
     nextAttachments.push({ path, name: attachmentName(path) })
   }
@@ -167,13 +180,15 @@ function addAttachmentPaths(paths: readonly DesktopDropPath[]): void {
 }
 
 function handleDesktopDragOver(event: DragEvent): void {
-  if (props.disabled) return
-  handleDragOver(event)
+  if (props.disabled !== true) {
+    handleDragOver(event)
+  }
 }
 
 function handleDesktopDrop(event: DragEvent): void {
-  if (props.disabled) return
-  handleDrop(event)
+  if (props.disabled !== true) {
+    handleDrop(event)
+  }
 }
 
 function handleDroppedPaths(paths: readonly DesktopDropPath[]): void {
@@ -182,36 +197,36 @@ function handleDroppedPaths(paths: readonly DesktopDropPath[]): void {
 
 const { dragging, handleDragOver, handleDrop, handleDragLeave } = useDesktopFileDrop(composerCard, handleDroppedPaths)
 
-async function chooseFiles(): Promise<void> {
-  if (props.disabled) return
+async function selectFiles(): Promise<void> {
+  if (props.disabled === true) {
+    return
+  }
   try {
-    const selectedPaths = await open({
-      directory: false,
-      multiple: true,
-      title: copy.value.chooseFiles,
-    })
-    if (Array.isArray(selectedPaths)) {
-      addAttachmentPaths(selectedPaths.map((path) => ({ path, kind: 'file' })))
-    }
+    const selectedPaths = await chooseFilesFromDialog(copy.value.chooseFiles)
+    addAttachmentPaths(selectedPaths.map((path) => ({ path, kind: 'file' })))
   } catch {
     return
   }
 }
 
 function clearComposerInput(): void {
-  if (composerInput.value !== null) composerInput.value.textContent = ''
+  if (composerInput.value !== null) {
+    composerInput.value.textContent = ''
+  }
   draft.value = ''
   attachments.value = []
   dropNotice.value = ''
 }
 
 function submit(): void {
-  if (!canSend.value) return
+  if (!canSend.value) {
+    return
+  }
   emit('submit', {
-    text: draft.value,
+    text: draft.value.trim(),
     paths: attachments.value.map((attachment) => attachment.path),
     modelId: selectedModelId.value,
-    thinking: selectedThinkingId.value,
+    thinkingLevel: selectedThinkingId.value,
   })
   clearComposerInput()
   void nextTick(() => composerInput.value?.focus())
@@ -239,7 +254,12 @@ function submit(): void {
         <div v-for="attachment in attachments" :key="attachmentKey(attachment.path)" class="omp-composer-attachment" role="listitem">
           <AppIcon name="file-text" :size="15" aria-hidden="true" />
           <span class="omp-composer-attachment-copy" :title="attachment.path">{{ attachment.name }}</span>
-          <button class="omp-composer-attachment-remove" type="button" :aria-label="`${copy.removeAttachment}: ${attachment.name}`" @click.stop="removeAttachment(attachment.path)">
+          <button
+            class="omp-composer-attachment-remove"
+            type="button"
+            :aria-label="`${copy.removeAttachment}: ${attachment.name}`"
+            @click.stop="removeAttachment(attachment.path)"
+          >
             <AppIcon name="x" :size="13" aria-hidden="true" />
           </button>
         </div>
@@ -249,7 +269,7 @@ function submit(): void {
         ref="composerInput"
         class="omp-composer-input"
         :class="{ 'omp-composer-input-disabled': props.disabled, 'omp-composer-input-focused': focused }"
-        :contenteditable="!props.disabled"
+        :contenteditable="props.disabled !== true"
         role="textbox"
         aria-multiline="true"
         :aria-label="props.workspaceTrigger ? copy.chooseWorkspace : copy.messagePlaceholder"
@@ -260,18 +280,20 @@ function submit(): void {
         @keydown.enter.exact.prevent="submit"
         @click.stop
       >
-        <span v-if="draft.length === 0" class="omp-composer-placeholder">{{ props.workspaceTrigger ? copy.composerPlaceholder : copy.messagePlaceholder }}</span>
+        <span v-if="draft.length === 0" class="omp-composer-placeholder">
+          {{ props.workspaceTrigger ? copy.composerPlaceholder : copy.messagePlaceholder }}
+        </span>
       </div>
     </div>
     <div class="omp-composer-row">
       <div class="omp-composer-tools">
-        <button class="omp-composer-add" type="button" :aria-label="copy.addFiles" :disabled="props.disabled" @click.stop="chooseFiles">
-          <AppIcon name="plus" :size="14" />
+        <button class="omp-composer-add" type="button" :aria-label="copy.addFiles" :disabled="props.disabled" @click.stop="selectFiles">
+          <AppIcon name="plus" :size="14" aria-hidden="true" />
         </button>
         <span v-if="attachments.length > 0" class="omp-composer-attachment-count" aria-hidden="true">{{ attachments.length }}</span>
       </div>
       <div class="omp-composer-trailing">
-        <div v-if="!props.disabled" class="omp-composer-model-picker">
+        <div v-if="props.disabled !== true" class="omp-composer-model-picker">
           <button
             class="omp-composer-select omp-composer-model"
             type="button"
@@ -283,7 +305,7 @@ function submit(): void {
             @keydown.esc.stop="closeModelMenu"
           >
             <span class="omp-composer-model-name">{{ selectedModel.name }}</span>
-            <AppIcon name="chevron-down" :class="{ 'omp-composer-model-chevron-open': modelMenuOpen }" :size="12" />
+            <AppIcon name="chevron-down" :class="{ 'omp-composer-model-chevron-open': modelMenuOpen }" :size="12" aria-hidden="true" />
           </button>
           <div
             v-if="modelMenuOpen"
@@ -294,31 +316,13 @@ function submit(): void {
             @keydown.esc.stop="closeModelMenu"
           >
             <div v-if="modelMenuPane === 'root'" class="omp-composer-model-menu-root">
-              <button
-                class="omp-composer-model-menu-cell"
-                type="button"
-                role="menuitem"
-                :aria-label="`${copy.modelLabel}: ${selectedModel.name}`"
-                @click="enterModelPane('model')"
-              >
-                <span class="omp-composer-model-menu-cell-copy">
-                  <strong>{{ copy.modelLabel }}</strong>
-                  <span>{{ selectedModel.name }}</span>
-                </span>
-                <AppIcon name="chevron-right" :size="14" />
+              <button class="omp-composer-model-menu-cell" type="button" role="menuitem" :aria-label="`${copy.modelLabel}: ${selectedModel.name}`" @click="enterModelPane('model')">
+                <span class="omp-composer-model-menu-cell-copy"><strong>{{ copy.modelLabel }}</strong><span>{{ selectedModel.name }}</span></span>
+                <AppIcon name="chevron-right" :size="14" aria-hidden="true" />
               </button>
-              <button
-                class="omp-composer-model-menu-cell"
-                type="button"
-                role="menuitem"
-                :aria-label="`${copy.thinkingLabel}: ${selectedThinking.label}`"
-                @click="enterModelPane('thinking')"
-              >
-                <span class="omp-composer-model-menu-cell-copy">
-                  <strong>{{ copy.thinkingLabel }}</strong>
-                  <span>{{ selectedThinking.label }}</span>
-                </span>
-                <AppIcon name="chevron-right" :size="14" />
+              <button class="omp-composer-model-menu-cell" type="button" role="menuitem" :aria-label="`${copy.thinkingLabel}: ${selectedThinking.label}`" @click="enterModelPane('thinking')">
+                <span class="omp-composer-model-menu-cell-copy"><strong>{{ copy.thinkingLabel }}</strong><span>{{ selectedThinking.label }}</span></span>
+                <AppIcon name="chevron-right" :size="14" aria-hidden="true" />
               </button>
             </div>
             <div v-else-if="modelMenuPane === 'model'" class="omp-composer-model-menu-groups" :aria-label="copy.modelLabel">
@@ -334,10 +338,8 @@ function submit(): void {
                   :aria-checked="model.id === selectedModelId"
                   @click="selectModel(model.id)"
                 >
-                  <span class="omp-composer-model-option-copy">
-                    <strong>{{ model.name }}</strong>
-                  </span>
-                  <AppIcon v-if="model.id === selectedModelId" name="check" :size="14" />
+                  <span class="omp-composer-model-option-copy"><strong>{{ model.name }}</strong></span>
+                  <AppIcon v-if="model.id === selectedModelId" name="check" :size="14" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -352,18 +354,14 @@ function submit(): void {
                 :aria-checked="option.value === selectedThinkingId"
                 @click="selectThinking(option.value)"
               >
-                <span class="omp-composer-model-option-copy">
-                  <strong>{{ option.label }}</strong>
-                </span>
-                <AppIcon v-if="option.value === selectedThinkingId" name="check" :size="14" />
+                <span class="omp-composer-model-option-copy"><strong>{{ option.label }}</strong></span>
+                <AppIcon v-if="option.value === selectedThinkingId" name="check" :size="14" aria-hidden="true" />
               </button>
             </div>
           </div>
         </div>
         <button class="omp-composer-send" type="button" :aria-label="copy.sendMessage" :disabled="!canSend" @click.stop="submit">
-          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-            <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 2.10714 6.51277 1.04402 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
-          </svg>
+          <AppIcon name="send" :size="16" aria-hidden="true" />
         </button>
       </div>
     </div>

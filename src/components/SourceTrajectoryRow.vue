@@ -2,7 +2,6 @@
 import { useAppSettings } from '../stores/appSettings'
 import { AppIcon } from './icons'
 import {
-  SOURCE_TRAJECTORY_SYSTEM_RECORD,
   type SourceTrajectoryGroup,
   type SourceTrajectoryLedgerRow,
   type SourceTrajectoryRecord,
@@ -52,7 +51,7 @@ function recordLabel(record: SourceTrajectoryRecord): string {
     <span class="omp-trajectory-record-event">
       <span class="omp-trajectory-record-index">—</span>
       <span class="omp-trajectory-kind-tag omp-trajectory-kind-tag-system">
-        <AppIcon :name="SOURCE_TRAJECTORY_SYSTEM_RECORD.icon" :size="12" aria-hidden="true" />
+        <AppIcon name="settings" :size="12" aria-hidden="true" />
         {{ copy.trajectory.system }}
       </span>
     </span>
