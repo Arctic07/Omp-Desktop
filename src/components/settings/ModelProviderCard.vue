@@ -18,13 +18,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: []
-  toggleEditor: []
+  'toggle-editor': []
   delete: []
-  toggleCustomSettings: []
+  'toggle-custom-settings': []
   'update:models': [models: ModelEditorModel[]]
   'update:api-key': [value: string]
   'update:endpoint': [value: string]
-  restoreDefaults: []
+  'restore-defaults': []
   fetch: []
   add: []
   cancel: []
@@ -87,7 +87,7 @@ const statusLabel = computed<string>(() => {
           class="omp-settings-button omp-settings-button-small"
           type="button"
           :aria-expanded="props.editing"
-          @click="emit('toggleEditor')"
+          @click="emit('toggle-editor')"
         >
           <AppIcon name="pencil-line" :size="14" aria-hidden="true" />
           {{ props.editing ? props.copy.hideConfiguration : props.copy.edit }}
@@ -120,7 +120,7 @@ const statusLabel = computed<string>(() => {
         class="omp-model-custom-settings-toggle"
         type="button"
         :aria-expanded="props.customSettingsOpen"
-        @click="emit('toggleCustomSettings')"
+        @click="emit('toggle-custom-settings')"
       >
         <span>
           <strong>{{ props.copy.customSettings }}</strong>
@@ -143,11 +143,12 @@ const statusLabel = computed<string>(() => {
         </label>
         <ModelCatalogEditor
           :copy="props.copy"
+          :models="props.provider.models"
           :fetching="props.fetching"
           :fetch-error="props.provider.fetchError"
           :validation-error="props.provider.validationError"
           @update:models="emit('update:models', $event)"
-          @restore-defaults="emit('restoreDefaults')"
+          @restore-defaults="emit('restore-defaults')"
           @fetch="emit('fetch')"
           @add="emit('add')"
         />

@@ -15,7 +15,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:models': [models: ModelEditorModel[]]
-  restoreDefaults: []
+  'restore-defaults': []
   fetch: []
   add: []
 }>()
@@ -78,21 +78,21 @@ function toggleExpanded(index: number): void {
     </div>
     <div class='omp-model-catalog-heading-actions'>
       <button
-        class='omp-settings-button omp-settings-button-small'
-        type='button'
-        :disabled='props.fetching'
-        @click='emit("restoreDefaults")'
+        class="omp-settings-button omp-settings-button-small"
+        type="button"
+        :disabled="props.fetching"
+        @click="emit('restore-defaults')"
       >
-        <AppIcon name='rotate-cw' :size='14' aria-hidden='true' />
+        <AppIcon name="rotate-cw" :size="14" aria-hidden="true" />
         {{ props.copy.restoreDefaultModels }}
       </button>
       <button
-        class='omp-settings-button omp-settings-button-small omp-settings-button-primary'
-        type='button'
-        :disabled='props.fetching'
-        @click='emit("fetch")'
+        class="omp-settings-button omp-settings-button-small omp-settings-button-primary"
+        type="button"
+        :disabled="props.fetching"
+        @click="emit('fetch')"
       >
-        <AppIcon name='refresh-cw' :size='14' aria-hidden='true' />
+        <AppIcon name="refresh-cw" :size="14" aria-hidden="true" />
         {{ props.fetching ? props.copy.fetchingModels : props.copy.fetchModels }}
       </button>
     </div>

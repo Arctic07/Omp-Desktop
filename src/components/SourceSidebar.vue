@@ -12,11 +12,11 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  newSession: []
-  selectSession: [sessionId: string]
+  'new-session': []
+  'select-session': [sessionId: string]
   toggle: []
-  openSettings: []
-  addWorkspace: []
+  'open-settings': []
+  'add-workspace': []
 }>()
 
 const { copy } = useAppSettings()
@@ -31,7 +31,7 @@ const { copy } = useAppSettings()
         class="omp-sidebar-brand"
         type="button"
         :aria-label="copy.newSessionLabel"
-        @click="emit('newSession')"
+        @click="emit('new-session')"
       >
         <span class="omp-sidebar-brand-identity" aria-hidden="true">
           <FishLogo class="omp-sidebar-brand-mark" :size="24" />
@@ -49,7 +49,7 @@ const { copy } = useAppSettings()
       </button>
     </div>
 
-    <button class="omp-sidebar-new-session" type="button" @click="emit('newSession')">
+    <button class="omp-sidebar-new-session" type="button" @click="emit('new-session')">
       <AppIcon name="plus" :size="props.collapsed ? 18 : 14" aria-hidden="true" />
       <span v-if="!props.collapsed">{{ copy.newSession }}</span>
     </button>
@@ -59,14 +59,14 @@ const { copy } = useAppSettings()
         :collapsed="props.collapsed"
         :active-session-id="props.activeSessionId"
         :projects="props.projects"
-        @new-session="emit('newSession')"
-        @select-session="emit('selectSession', $event)"
-        @add-workspace="emit('addWorkspace')"
+        @new-session="emit('new-session')"
+        @select-session="emit('select-session', $event)"
+        @add-workspace="emit('add-workspace')"
       />
     </div>
 
     <div class="omp-sidebar-footer">
-      <button class="omp-sidebar-settings" type="button" :aria-label="copy.settings" @click="emit('openSettings')">
+      <button class="omp-sidebar-settings" type="button" :aria-label="copy.settings" @click="emit('open-settings')">
         <AppIcon name="settings" :size="16" aria-hidden="true" />
         <span v-if="!props.collapsed">{{ copy.settings }}</span>
       </button>
