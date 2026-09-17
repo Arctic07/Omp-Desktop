@@ -239,6 +239,29 @@ export interface SourceSettingsCopy {
   about: SourceSettingsAboutCopy
 }
 
+interface SourceTrajectoryCopy {
+  overview: string
+  overviewAria: string
+  event: string
+  content: string
+  input: string
+  output: string
+  think: string
+  time: string
+  model: string
+  tools: string
+  turn: string
+  step: string
+  system: string
+  user: string
+  message: string
+  tool: string
+  initialPrompt: string
+  records: string
+  calls: string
+  tokens: string
+}
+
 export interface SourceCopy {
   brand: string
   newSession: string
@@ -266,6 +289,7 @@ export interface SourceCopy {
   conversationMode: string
   conversationTab: string
   trajectoryTab: string
+  trajectory: SourceTrajectoryCopy
   openWorkspace: string
   openMoreActions: string
   openRightPanel: string
@@ -319,6 +343,28 @@ const en: SourceCopy = {
   conversationMode: 'Standard mode',
   conversationTab: 'Chat',
   trajectoryTab: 'Trajectory',
+  trajectory: {
+    overview: 'Overview',
+    overviewAria: 'Trajectory timeline',
+    event: 'Event',
+    content: 'Content',
+    input: 'Input',
+    output: 'Output',
+    think: 'Think',
+    time: 'Time',
+    model: 'Model',
+    tools: 'Tools',
+    turn: 'Turn',
+    step: 'Step',
+    system: 'SYSTEM',
+    user: 'USER',
+    message: 'MESSAGE',
+    tool: 'TOOL',
+    initialPrompt: 'Initial System Prompt',
+    records: 'records',
+    calls: 'calls',
+    tokens: 'tokens',
+  },
   openWorkspace: 'Open workspace menu',
   openMoreActions: 'More actions',
   openRightPanel: 'Open right panel',
@@ -644,6 +690,28 @@ const zh: SourceCopy = {
   conversationMode: '标准模式',
   conversationTab: '对话',
   trajectoryTab: '轨迹',
+  trajectory: {
+    overview: '概览',
+    overviewAria: '轨迹时间线',
+    event: '事件',
+    content: '内容',
+    input: '输入',
+    output: '输出',
+    think: '思考',
+    time: '时间',
+    model: '模型',
+    tools: '工具',
+    turn: '轮次',
+    step: '步骤',
+    system: '系统',
+    user: '用户',
+    message: '消息',
+    tool: '工具',
+    initialPrompt: '初始系统提示词',
+    records: '条记录',
+    calls: '次调用',
+    tokens: 'tokens',
+  },
   openWorkspace: '打开工作区菜单',
   openMoreActions: '更多操作',
   openRightPanel: '打开右侧面板',

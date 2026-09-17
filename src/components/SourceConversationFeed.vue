@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
@@ -280,28 +280,9 @@ const virtualRows = computed(() => virtualizer.value.getVirtualItems().map((virt
 })))
 const totalSize = computed(() => virtualizer.value.getTotalSize())
 
-let initialScrollTimer: number | null = null
-
-watch([totalSize, () => props.scrollElement], ([, element]) => {
-  if (element === null) return
-  if (initialScrollTimer !== null) window.clearTimeout(initialScrollTimer)
-  initialScrollTimer = window.setTimeout(() => {
-    element.scrollTo({ top: 0, behavior: 'auto' })
-    initialScrollTimer = null
-  }, 800)
-}, { flush: 'post', immediate: true })
-
 onUnmounted(() => {
   clearCopiedAssistantTimer()
-  if (initialScrollTimer !== null) window.clearTimeout(initialScrollTimer)
 })
-
-watch(() => props.scrollElement, (element) => {
-  if (element === null) return
-  window.requestAnimationFrame(() => {
-    element.scrollTop = 0
-  })
-}, { flush: 'post' })
 </script>
 
 <template>

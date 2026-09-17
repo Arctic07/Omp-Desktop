@@ -40,8 +40,40 @@
 }
 
 .omp-conversation-view {
+  position: relative;
   flex: 1 0 auto;
   min-height: 0;
+}
+
+.omp-conversation-view-trajectory {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.omp-conversation-tab-pane {
+  width: 100%;
+}
+
+.omp-conversation-tab-pane-trajectory {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.omp-conversation-view-trajectory .omp-conversation-tab-pane-trajectory {
+  flex: 1 1 auto;
+}
+
+.omp-conversation-tab-pane-inactive {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .omp-conversation-header {

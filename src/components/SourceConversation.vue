@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -10,6 +10,7 @@ import FishLogo from './FishLogo.vue'
 import SourceComposer from './SourceComposer.vue'
 import SourceConversationFeed from './SourceConversationFeed.vue'
 import SourceConversationHeader from './SourceConversationHeader.vue'
+import SourceTrajectory from './SourceTrajectory.vue'
 
 const props = defineProps<{
   sessionId: string | null
@@ -19,7 +20,12 @@ const conversationRoot = ref<HTMLElement | null>(null)
 const conversationScroll = ref<HTMLElement | null>(null)
 const { copy } = useAppSettings()
 const workspacePath = ref<string | null>(null)
+type ConversationTab = 'conversation' | 'trajectory'
+
+const activeTab = ref<ConversationTab>('conversation')
+const conversationScrollTop = ref(0)
 let rootResizeObserver: ResizeObserver | null = null
+let scrollRestoreToken = 0
 
 async function loadWorkspacePath(): Promise<void> {
   try {
@@ -44,7 +50,45 @@ async function chooseWorkspace(): Promise<void> {
   }
 }
 
+function invalidateScheduledScrollRestore(): void {
+  scrollRestoreToken += 1
+}
+
+function scheduleScrollRestore(top: number): void {
+  const token = ++scrollRestoreToken
+  void nextTick(() => {
+    if (token !== scrollRestoreToken || activeTab.value !== 'conversation') return
+
+    const element = conversationScroll.value
+    if (element === null) return
+    element.scrollTo({ top, behavior: 'auto' })
+  })
+}
+
+function selectTab(nextTab: ConversationTab): void {
+  if (nextTab === activeTab.value) return
+
+  if (activeTab.value === 'conversation') {
+    conversationScrollTop.value = conversationScroll.value?.scrollTop ?? 0
+  }
+
+  invalidateScheduledScrollRestore()
+  if (nextTab === 'trajectory') {
+    conversationScroll.value?.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  activeTab.value = nextTab
+  if (nextTab === 'conversation') scheduleScrollRestore(conversationScrollTop.value)
+}
+
+watch(() => props.sessionId, () => {
+  activeTab.value = 'conversation'
+  conversationScrollTop.value = 0
+  scheduleScrollRestore(0)
+})
+
 onUnmounted(() => {
+  invalidateScheduledScrollRestore()
   rootResizeObserver?.disconnect()
   rootResizeObserver = null
 })
@@ -59,19 +103,41 @@ onMounted(() => {
     conversationRoot.value?.style.setProperty('--omp-conversation-column-width', `${width}px`)
   })
   rootResizeObserver.observe(conversationRoot.value)
-  window.setTimeout(() => {
-    conversationScroll.value?.scrollTo({ top: 0, behavior: 'auto' })
-  }, 80)
 })
 </script>
 
 <template>
   <section ref="conversationRoot" class="omp-conversation-root" :data-phase="props.sessionId === null ? 'hero' : 'active'" aria-label="Conversation">
-    <SourceConversationHeader v-if="props.sessionId !== null" :session-id="props.sessionId" />
+    <SourceConversationHeader
+      v-if="props.sessionId !== null"
+      :session-id="props.sessionId"
+      :active-tab="activeTab"
+      @update:active-tab="selectTab"
+    />
     <div class="omp-conversation-body">
       <div ref="conversationScroll" class="omp-conversation-scroll-body" :class="{ 'omp-conversation-scroll-body-empty': props.sessionId === null, 'omp-conversation-scroll-body-session': props.sessionId !== null }">
-        <div v-if="props.sessionId !== null" class="omp-conversation-view">
-          <SourceConversationFeed :scroll-element="conversationScroll" />
+        <div
+          v-if="props.sessionId !== null"
+          id="omp-conversation-panel"
+          class="omp-conversation-view"
+          :class="{ 'omp-conversation-view-trajectory': activeTab === 'trajectory' }"
+          role="tabpanel"
+          :aria-labelledby="activeTab === 'trajectory' ? 'omp-trajectory-tab' : 'omp-conversation-tab'"
+        >
+          <div
+            class="omp-conversation-tab-pane omp-conversation-tab-pane-conversation"
+            :class="{ 'omp-conversation-tab-pane-inactive': activeTab !== 'conversation' }"
+            :aria-hidden="activeTab !== 'conversation'"
+          >
+            <SourceConversationFeed :scroll-element="conversationScroll" />
+          </div>
+          <div
+            class="omp-conversation-tab-pane omp-conversation-tab-pane-trajectory"
+            :class="{ 'omp-conversation-tab-pane-inactive': activeTab !== 'trajectory' }"
+            :aria-hidden="activeTab !== 'trajectory'"
+          >
+            <SourceTrajectory />
+          </div>
         </div>
         <div class="omp-composer-seat" :class="{ 'omp-composer-hero': props.sessionId === null, 'omp-composer-seat-session': props.sessionId !== null }">
           <div class="omp-hero-shell">
@@ -118,4 +184,3 @@ onMounted(() => {
     </div>
   </section>
 </template>
-

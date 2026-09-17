@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 
 import { useAppSettings } from '../stores/appSettings'
 import { AppIcon } from './icons'
 
+type ConversationTab = 'conversation' | 'trajectory'
+
 const props = defineProps<{
   sessionId: string
+  activeTab: ConversationTab
+}>()
+
+const emit = defineEmits<{
+  'update:active-tab': [tab: ConversationTab]
 }>()
 
 const { copy } = useAppSettings()
-const activeTab = ref<'conversation' | 'trajectory'>('conversation')
 
 const sessionTitles: Record<string, string> = {
   'session-omp-build': '首页 Composer 优化',
@@ -28,6 +34,7 @@ const sessionTitles: Record<string, string> = {
 
 const title = computed(() => sessionTitles[props.sessionId] ?? '本地开发会话')
 </script>
+
 <template>
   <header class="omp-conversation-header">
     <div class="omp-conversation-header-main">
@@ -37,22 +44,26 @@ const title = computed(() => sessionTitles[props.sessionId] ?? '本地开发会�
       </div>
       <div class="omp-conversation-header-tabs" role="tablist">
         <button
+          id="omp-conversation-tab"
           class="omp-conversation-header-tab"
-          :class="{ 'omp-conversation-header-tab-active': activeTab === 'conversation' }"
+          :class="{ 'omp-conversation-header-tab-active': props.activeTab === 'conversation' }"
           type="button"
           role="tab"
-          :aria-selected="activeTab === 'conversation'"
-          @click="activeTab = 'conversation'"
+          aria-controls="omp-conversation-panel"
+          :aria-selected="props.activeTab === 'conversation'"
+          @click="emit('update:active-tab', 'conversation')"
         >
           {{ copy.conversationTab }}
         </button>
         <button
+          id="omp-trajectory-tab"
           class="omp-conversation-header-tab"
-          :class="{ 'omp-conversation-header-tab-active': activeTab === 'trajectory' }"
+          :class="{ 'omp-conversation-header-tab-active': props.activeTab === 'trajectory' }"
           type="button"
           role="tab"
-          :aria-selected="activeTab === 'trajectory'"
-          @click="activeTab = 'trajectory'"
+          aria-controls="omp-conversation-panel"
+          :aria-selected="props.activeTab === 'trajectory'"
+          @click="emit('update:active-tab', 'trajectory')"
         >
           {{ copy.trajectoryTab }}
         </button>
