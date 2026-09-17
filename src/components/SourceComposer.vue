@@ -1,18 +1,36 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+import type { SourceThinkingLevel } from '../i18n'
 import { useAppSettings } from '../stores/appSettings'
 import { AppIcon } from './icons'
 
 const { copy } = useAppSettings()
 
-const modelOptions = [
-  { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna Default', provider: 'OpenAI' },
-  { id: 'deepseek-v3.2', name: 'DeepSeek V3.2', provider: 'DeepSeek' },
-  { id: 'claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'Anthropic' },
+const modelGroups = [
+  {
+    provider: 'DeepSeek',
+    models: [
+      { id: 'deepseek-v41-flash', name: 'DeepSeek-V41-Flash', provider: 'DeepSeek' },
+      { id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash', provider: 'DeepSeek' },
+      { id: 'deepseek-v4-pro', name: 'DeepSeek-V4-Pro', provider: 'DeepSeek' },
+      { id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek-V4-Flash-Vision-Exp', provider: 'DeepSeek' },
+    ],
+  },
+  {
+    provider: 'command',
+    models: [
+      { id: 'gpt-5.6-luna', name: 'gpt-5.6-luna', provider: 'command' },
+      { id: 'claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'command' },
+      { id: 'claude-sonnet-4.6', name: 'Claude Sonnet 4.6', provider: 'command' },
+      { id: 'claude-fable-5', name: 'Claude Fable 5', provider: 'command' },
+    ],
+  },
 ] as const
 
-type ModelId = typeof modelOptions[number]['id']
+const modelOptions = modelGroups.flatMap((group) => group.models)
+type ModelId = typeof modelGroups[number]['models'][number]['id']
+type ModelMenuPane = 'root' | 'model' | 'thinking'
 
 const props = defineProps<{
   disabled?: boolean
@@ -27,9 +45,14 @@ const draft = ref('')
 const focused = ref(false)
 const planActive = ref(false)
 const modelMenuOpen = ref(false)
-const selectedModelId = ref<ModelId>(modelOptions[0].id)
+const modelMenuPane = ref<ModelMenuPane>('root')
+const selectedModelId = ref<ModelId>('gpt-5.6-luna')
+const selectedThinkingId = ref<SourceThinkingLevel>('high')
 const canSend = computed(() => draft.value.trim().length > 0 && !props.disabled)
 const selectedModel = computed(() => modelOptions.find((model) => model.id === selectedModelId.value) ?? modelOptions[0])
+const selectedThinking = computed(() =>
+  copy.value.thinkingOptions.find((option) => option.value === selectedThinkingId.value) ?? copy.value.thinkingOptions[0],
+)
 
 function requestWorkspace() {
   if (props.workspaceTrigger) emit('requestWorkspace')
@@ -40,10 +63,35 @@ function updateDraft(event: Event) {
   if (target instanceof HTMLElement) draft.value = target.innerText
 }
 
-function selectModel(id: string) {
+function openModelMenu() {
+  modelMenuOpen.value = true
+  modelMenuPane.value = 'root'
+}
+
+function closeModelMenu() {
+  modelMenuOpen.value = false
+  modelMenuPane.value = 'root'
+}
+
+function toggleModelMenu() {
+  if (modelMenuOpen.value) closeModelMenu()
+  else openModelMenu()
+}
+
+function enterModelPane(pane: Exclude<ModelMenuPane, 'root'>) {
+  modelMenuPane.value = pane
+}
+
+function selectModel(id: ModelId) {
   const model = modelOptions.find((option) => option.id === id)
   if (model !== undefined) selectedModelId.value = model.id
-  modelMenuOpen.value = false
+  closeModelMenu()
+}
+
+function selectThinking(id: SourceThinkingLevel) {
+  const option = copy.value.thinkingOptions.find((choice) => choice.value === id)
+  if (option !== undefined) selectedThinkingId.value = option.value
+  closeModelMenu()
 }
 
 function submit() {
@@ -79,13 +127,15 @@ function submit() {
         </button>
         <div v-if="!props.disabled" class="dsh-composer-modes">
           <button
-            class="dsh-composer-select dsh-composer-plan"
+            class="dsh-composer-select dsh-composer-access"
             :class="{ 'dsh-composer-select-active': planActive }"
             type="button"
             :aria-pressed="planActive"
             @click.stop="planActive = !planActive"
           >
-            {{ copy.planMode }}
+            <AppIcon name="shield" :size="13" />
+            <span>{{ copy.workspaceEditMode }}</span>
+            <AppIcon name="chevron-down" :size="12" />
           </button>
         </div>
       </div>
@@ -94,32 +144,89 @@ function submit() {
           <button
             class="dsh-composer-select dsh-composer-model"
             type="button"
-            aria-haspopup="listbox"
+            aria-haspopup="menu"
             :aria-expanded="modelMenuOpen"
-            :aria-label="copy.modelLabel"
-            @click.stop="modelMenuOpen = !modelMenuOpen"
-            @keydown.esc="modelMenuOpen = false"
+            :aria-label="selectedModel.name"
+            :title="selectedModel.name"
+            @click.stop="toggleModelMenu"
+            @keydown.esc.stop="closeModelMenu"
           >
             <span class="dsh-composer-model-name">{{ selectedModel.name }}</span>
-            <AppIcon name="chevron-down" :size="12" />
+            <AppIcon name="chevron-down" :class="{ 'dsh-composer-model-chevron-open': modelMenuOpen }" :size="12" />
           </button>
-          <div v-if="modelMenuOpen" class="dsh-composer-model-menu" role="listbox" :aria-label="copy.modelLabel" @click.stop>
-            <button
-              v-for="model in modelOptions"
-              :key="model.id"
-              class="dsh-composer-model-option"
-              :class="{ 'dsh-composer-model-option-active': model.id === selectedModelId }"
-              type="button"
-              role="option"
-              :aria-selected="model.id === selectedModelId"
-              @click="selectModel(model.id)"
-            >
-              <span class="dsh-composer-model-option-copy">
-                <strong>{{ model.name }}</strong>
-                <small>{{ model.provider }}</small>
-              </span>
-              <AppIcon v-if="model.id === selectedModelId" name="check" :size="14" />
-            </button>
+          <div
+            v-if="modelMenuOpen"
+            class="dsh-composer-model-menu"
+            role="menu"
+            :aria-label="modelMenuPane === 'thinking' ? copy.thinkingLabel : copy.modelLabel"
+            @click.stop
+            @keydown.esc.stop="closeModelMenu"
+          >
+            <div v-if="modelMenuPane === 'root'" class="dsh-composer-model-menu-root">
+              <button
+                class="dsh-composer-model-menu-cell"
+                type="button"
+                role="menuitem"
+                :aria-label="`${copy.modelLabel}: ${selectedModel.name}`"
+                @click="enterModelPane('model')"
+              >
+                <span class="dsh-composer-model-menu-cell-copy">
+                  <strong>{{ copy.modelLabel }}</strong>
+                  <span>{{ selectedModel.name }}</span>
+                </span>
+                <AppIcon name="chevron-right" :size="14" />
+              </button>
+              <button
+                class="dsh-composer-model-menu-cell"
+                type="button"
+                role="menuitem"
+                :aria-label="`${copy.thinkingLabel}: ${selectedThinking.label}`"
+                @click="enterModelPane('thinking')"
+              >
+                <span class="dsh-composer-model-menu-cell-copy">
+                  <strong>{{ copy.thinkingLabel }}</strong>
+                  <span>{{ selectedThinking.label }}</span>
+                </span>
+                <AppIcon name="chevron-right" :size="14" />
+              </button>
+            </div>
+            <div v-else-if="modelMenuPane === 'model'" class="dsh-composer-model-menu-groups" :aria-label="copy.modelLabel">
+              <div v-for="group in modelGroups" :key="group.provider" class="dsh-composer-model-menu-group" role="group" :aria-label="group.provider">
+                <div class="dsh-composer-model-menu-group-title">{{ group.provider }}</div>
+                <button
+                  v-for="model in group.models"
+                  :key="model.id"
+                  class="dsh-composer-model-option"
+                  :class="{ 'dsh-composer-model-option-active': model.id === selectedModelId }"
+                  type="button"
+                  role="menuitemradio"
+                  :aria-checked="model.id === selectedModelId"
+                  @click="selectModel(model.id)"
+                >
+                  <span class="dsh-composer-model-option-copy">
+                    <strong>{{ model.name }}</strong>
+                  </span>
+                  <AppIcon v-if="model.id === selectedModelId" name="check" :size="14" />
+                </button>
+              </div>
+            </div>
+            <div v-else class="dsh-composer-model-menu-thinking" role="group" :aria-label="copy.thinkingLabel">
+              <button
+                v-for="option in copy.thinkingOptions"
+                :key="option.value"
+                class="dsh-composer-model-option"
+                :class="{ 'dsh-composer-model-option-active': option.value === selectedThinkingId }"
+                type="button"
+                role="menuitemradio"
+                :aria-checked="option.value === selectedThinkingId"
+                @click="selectThinking(option.value)"
+              >
+                <span class="dsh-composer-model-option-copy">
+                  <strong>{{ option.label }}</strong>
+                </span>
+                <AppIcon v-if="option.value === selectedThinkingId" name="check" :size="14" />
+              </button>
+            </div>
           </div>
         </div>
         <button class="dsh-composer-send" type="button" :aria-label="copy.sendMessage" :disabled="!canSend" @click.stop="submit">

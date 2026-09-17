@@ -13,6 +13,7 @@ export type SourceLanguage = 'en' | 'zh'
 export type SourceTheme = 'light' | 'dark' | 'system'
 export type SourceConversationDensity = 'comfortable' | 'compact'
 export type SourceBusyBehavior = 'queue' | 'interrupt'
+export type SourceThinkingLevel = 'off' | 'low' | 'high' | 'max'
 
 export interface SourceSettingChoice<Value extends string = string> {
   value: Value
@@ -252,6 +253,8 @@ export interface SourceCopy {
   addWorkspace: string
   noSessions: string
   noMatches: string
+  expandSessions: string
+  collapseSessions: string
   addWorkspaceMenu: string
   heroHeadline: string
   preview: string
@@ -261,7 +264,23 @@ export interface SourceCopy {
   addFiles: string
   sendMessage: string
   planMode: string
+  workspaceEditMode: string
+  conversationMode: string
+  conversationTab: string
+  trajectoryTab: string
+  openWorkspace: string
+  openMoreActions: string
+  openRightPanel: string
+  toolDone: string
+  toolRunning: string
+  toolFailed: string
+  toolInput: string
+  toolOutput: string
+  toolCopy: string
+  toolCopied: string
   modelLabel: string
+  thinkingLabel: string
+  thinkingOptions: readonly SourceSettingChoice<SourceThinkingLevel>[]
   settingsTitle: string
   closeSettings: string
   settingsSections: readonly string[]
@@ -289,16 +308,39 @@ const en: SourceCopy = {
   addWorkspace: 'Add workspace',
   noSessions: 'No sessions yet',
   noMatches: 'No matching sessions',
+  expandSessions: 'Show {count} more sessions',
+  collapseSessions: 'Collapse sessions',
   addWorkspaceMenu: 'Add workspace…',
   heroHeadline: 'Into the Unknown',
   preview: 'Preview',
   chooseWorkspace: 'Choose workspace',
   composerPlaceholder: 'Choose a workspace to start',
-  messagePlaceholder: 'Message or run a task',
+  messagePlaceholder: 'Message, run a command, or mention a file',
   addFiles: 'Add files or run commands',
   sendMessage: 'Send message',
   planMode: 'Plan',
+  workspaceEditMode: 'Workspace edits',
+  conversationMode: 'Standard mode',
+  conversationTab: 'Chat',
+  trajectoryTab: 'Trajectory',
+  openWorkspace: 'Open workspace menu',
+  openMoreActions: 'More actions',
+  openRightPanel: 'Open right panel',
+  toolDone: 'Done',
+  toolRunning: 'Running',
+  toolFailed: 'Failed',
+  toolInput: 'IN',
+  toolOutput: 'OUT',
+  toolCopy: 'Copy',
+  toolCopied: 'Copied',
   modelLabel: 'Model',
+  thinkingLabel: 'Thinking level',
+  thinkingOptions: [
+    { value: 'off', label: 'Off' },
+    { value: 'low', label: 'Low' },
+    { value: 'high', label: 'High' },
+    { value: 'max', label: 'Max' },
+  ],
   settingsTitle: 'Settings',
   closeSettings: 'Close settings',
   settingsSections: ['General', 'Models', 'Agent modes', 'Skills', 'Plugins', 'Sessions', 'Appearance', 'About'],
@@ -594,6 +636,8 @@ const zh: SourceCopy = {
   addWorkspace: '添加工作区',
   noSessions: '暂无会话',
   noMatches: '无匹配会话',
+  expandSessions: '展开其余 {count} 个会话',
+  collapseSessions: '收起会话',
   addWorkspaceMenu: '添加工作区…',
   heroHeadline: '探索未至之境',
   preview: '预览版',
@@ -602,8 +646,29 @@ const zh: SourceCopy = {
   addFiles: '添加文件或调用指令',
   sendMessage: '发送消息',
   planMode: '计划',
+  workspaceEditMode: '工作区内修改',
+  conversationMode: '标准模式',
+  conversationTab: '对话',
+  trajectoryTab: '轨迹',
+  openWorkspace: '打开工作区菜单',
+  openMoreActions: '更多操作',
+  openRightPanel: '打开右侧面板',
+  toolDone: '完成',
+  toolRunning: '运行中',
+  toolFailed: '失败',
+  toolInput: '输入',
+  toolOutput: '输出',
+  toolCopy: '复制',
+  toolCopied: '已复制',
   modelLabel: '模型',
-  messagePlaceholder: '发消息或创建任务',
+  thinkingLabel: '推理等级',
+  thinkingOptions: [
+    { value: 'off', label: 'Off' },
+    { value: 'low', label: 'Low' },
+    { value: 'high', label: 'High' },
+    { value: 'max', label: 'Max' },
+  ],
+  messagePlaceholder: '发消息或创建任务，调用指令，@ 文件或对话',
   settingsTitle: '设置',
   closeSettings: '关闭设置',
   settingsSections: ['常规', '模型', '智能体模式', '技能', '插件', '会话', '外观', '关于'],

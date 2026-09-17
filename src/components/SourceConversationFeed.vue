@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 import { useVirtualizer } from '@tanstack/vue-virtual'
+
+import { useAppSettings } from '../stores/appSettings'
+import { AppIcon, type AppIconName } from './icons'
+import SourceCodeBlock from './SourceCodeBlock.vue'
+import SourceTerminalBlock from './SourceTerminalBlock.vue'
 
 interface UserEntry {
   id: string
   role: 'user'
   text: string
+  attachment?: {
+    name: string
+    meta: string
+  }
 }
 
 interface AssistantEntry {
@@ -15,69 +24,160 @@ interface AssistantEntry {
   text: string
 }
 
+interface ToolGroupEntry {
+  id: string
+  role: 'tool-group'
+  label: string
+}
+
 interface ToolEntry {
   id: string
   role: 'tool'
+  icon: AppIconName
   title: string
   summary: string
-  state: 'success' | 'running'
+  state: 'success' | 'running' | 'error'
   kind: 'terminal' | 'code'
   body: string
+  language?: string
+  command?: string
+  cwd?: string
 }
 
-type FeedEntry = UserEntry | AssistantEntry | ToolEntry
+type FeedEntry = UserEntry | AssistantEntry | ToolGroupEntry | ToolEntry
 
 const props = defineProps<{
   scrollElement: HTMLElement | null
 }>()
+
+const { copy } = useAppSettings()
 
 const entries: readonly FeedEntry[] = [
   {
     id: 'user-request',
     role: 'user',
     text: '检查首页 Composer 的布局，并把模型选择和工具输出展示得更清晰。',
+    attachment: { name: 'tsconfig.node.json', meta: 'JSON 334B' },
   },
   {
-    id: 'assistant-plan',
-    role: 'assistant',
-    text: '我会先查看输入区、侧栏和对话渲染结构，再按现有设计令牌整理界面。',
+    id: 'tool-group',
+    role: 'tool-group',
+    label: '15 次工具调用',
+  },
+  {
+    id: 'tool-context',
+    role: 'tool',
+    icon: 'cloud-download',
+    title: '上下文注入',
+    summary: '@deepseek-ai/dsh-system-prompt',
+    state: 'success',
+    kind: 'terminal',
+    body: 'System prompt loaded',
+    command: 'load system prompt',
+    cwd: 'Codex',
+  },
+  {
+    id: 'tool-pwsh',
+    role: 'tool',
+    icon: 'terminal',
+    title: 'Pwsh',
+    summary: 'Locate Web source and build directories',
+    state: 'success',
+    kind: 'terminal',
+    command: 'Get-ChildItem -Recurse -Directory workspace/deepseek-harness/apps/web | Select-Object Name',
+    cwd: 'Codex',
+    body: 'FullName\n--------\nworkspace/deepseek-harness/apps/web/dist\nworkspace/deepseek-harness/apps/web/lib\nworkspace/deepseek-harness/apps/web/src\nworkspace/deepseek-harness/apps/web/lib/types/src',
   },
   {
     id: 'tool-read',
     role: 'tool',
-    title: 'read',
-    summary: '读取 src/components 与参考界面结构',
+    icon: 'file-text',
+    title: '读取',
+    summary: 'workspace/deepseek-harness/apps/web/package.json',
+    state: 'success',
+    kind: 'code',
+    language: 'json',
+    body: '{\n  "name": "@deepseek-ai/dsh-web-frontend",\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build"\n  }\n}',
+  },
+  {
+    id: 'tool-read-error',
+    role: 'tool',
+    icon: 'file-text',
+    title: '读取',
+    summary: 'Error: cannot read workspace/client/package.json: not found',
+    state: 'error',
+    kind: 'terminal',
+    command: 'read workspace/client/package.json',
+    cwd: 'Codex',
+    body: 'Error: cannot read workspace/client/package.json: not found',
+  },
+  {
+    id: 'tool-glob',
+    role: 'tool',
+    icon: 'search',
+    title: 'Glob',
+    summary: 'apps/*/package.json',
     state: 'success',
     kind: 'terminal',
-    body: 'src/components/SourceComposer.vue\nsrc/components/SourceSidebar.vue\nsrc/components/SourceConversation.vue\n\n3 files inspected',
+    command: 'glob apps/*/package.json',
+    cwd: 'Codex',
+    body: 'apps/web/package.json\napps/cli/package.json\napps/desktop/package.json',
   },
   {
     id: 'tool-code',
     role: 'tool',
+    icon: 'code-2',
     title: 'run_code',
     summary: '生成 Composer 状态模型',
     state: 'success',
     kind: 'code',
-    body: "const selectedModel = 'GPT-5.6 Luna Default'\nconst planEnabled = true\nconst workspace = 'C:\\project\\Omp-Desktop'",
+    language: 'typescript',
+    body: "const selectedModel = 'gpt-5.6-luna'\nconst workspace = 'workspace/omp-tauri-des'\nconst toolRows = 15",
+  },
+  {
+    id: 'tool-bash',
+    role: 'tool',
+    icon: 'terminal',
+    title: 'bash',
+    summary: '检查界面构建状态',
+    state: 'success',
+    kind: 'terminal',
+    command: 'pnpm typecheck',
+    cwd: 'Codex',
+    body: '> omp-tauri-desktop@0.1.0 typecheck\n> vue-tsc --noEmit\n\nNo errors found.',
+  },
+  {
+    id: 'tool-edit',
+    role: 'tool',
+    icon: 'file-diff',
+    title: 'edit',
+    summary: '同步消息与工具卡片样式',
+    state: 'error',
+    kind: 'terminal',
+    command: 'apply patch src/components',
+    cwd: 'Codex',
+    body: '2 files changed\nError: preview needs a workspace selection',
   },
   {
     id: 'tool-check',
     role: 'tool',
+    icon: 'terminal',
     title: 'pnpm typecheck',
     summary: '检查 TypeScript 类型',
     state: 'running',
     kind: 'terminal',
-    body: '> omp-tauri-desktop@0.1.0 typecheck\n> vue-tsc --noEmit\n\nChecking project files…',
+    command: 'pnpm typecheck',
+    cwd: 'Codex',
+    body: 'Checking project files…',
   },
   {
     id: 'assistant-summary',
     role: 'assistant',
-    text: '输入区已改为左对齐布局，Plan 与模型选择可交互，工具调用和代码输出也有独立的可折叠信息层。',
+    text: '输入区、消息正文、代码输出和工具调用现在使用同一套字号、行高和对齐轴；工具卡片支持展开查看输入、输出与代码内容。',
   },
 ]
 
-const feedList = ref<HTMLElement | null>(null)
-const openToolIds = ref(new Set(['tool-read', 'tool-code']))
+const openToolIds = ref(new Set(['tool-pwsh', 'tool-read']))
 
 function updateToolOpenState(id: string, event: Event): void {
   const details = event.currentTarget
@@ -89,30 +189,36 @@ function updateToolOpenState(id: string, event: Event): void {
   openToolIds.value = nextOpenToolIds
 }
 
+function toolStateLabel(state: ToolEntry['state']): string {
+  if (state === 'running') return copy.value.toolRunning
+  if (state === 'error') return copy.value.toolFailed
+  return copy.value.toolDone
+}
+
 function estimateEntrySize(index: number): number {
   const entry = entries[index]
   if (entry === undefined) return 48
 
-  const rowGap = index === entries.length - 1 ? 0 : 18
+  const rowGap = index === entries.length - 1 ? 0 : 16
+  if (entry.role === 'tool-group') return 32 + rowGap
   if (entry.role === 'assistant') {
     const lineCount = Math.max(1, Math.ceil(entry.text.length / 72))
-    return 46 + lineCount * 24 + rowGap
+    return 24 + lineCount * 24 + rowGap
   }
 
   if (entry.role === 'user') {
     const lineCount = Math.max(1, Math.ceil(entry.text.length / 72))
-    return 42 + lineCount * 22 + rowGap
+    return 92 + lineCount * 22 + rowGap
   }
 
+  if (!openToolIds.value.has(entry.id)) return 28 + rowGap
   const bodyLineCount = Math.max(1, entry.body.split('\n').length)
-  const bodySize = entry.id === 'tool-read' || entry.id === 'tool-code'
-    ? Math.min(220, 24 + bodyLineCount * 18)
-    : 0
-  return 28 + bodySize + rowGap
+  if (entry.kind === 'code') return 60 + Math.min(220, 32 + bodyLineCount * 19) + rowGap
+  return 52 + Math.min(224, 32 + bodyLineCount * 19) + rowGap
 }
 
 function getEntryKey(index: number): string {
-  return entries[index].id
+  return entries[index]?.id ?? String(index)
 }
 
 const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(computed(() => ({
@@ -123,8 +229,6 @@ const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(computed(() => ({
   initialRect: { width: 1024, height: 720 },
   overscan: 7,
   useAnimationFrameWithResizeObserver: true,
-  anchorTo: 'end' as const,
-  followOnAppend: 'auto' as const,
   scrollEndThreshold: 96,
 })))
 
@@ -133,11 +237,33 @@ const virtualRows = computed(() => virtualizer.value.getVirtualItems().map((virt
   entry: entries[virtualRow.index],
 })))
 const totalSize = computed(() => virtualizer.value.getTotalSize())
+
+let initialScrollTimer: number | null = null
+
+watch([totalSize, () => props.scrollElement], ([, element]) => {
+  if (element === null) return
+  if (initialScrollTimer !== null) window.clearTimeout(initialScrollTimer)
+  initialScrollTimer = window.setTimeout(() => {
+    element.scrollTo({ top: 0, behavior: 'auto' })
+    initialScrollTimer = null
+  }, 800)
+}, { flush: 'post', immediate: true })
+
+onUnmounted(() => {
+  if (initialScrollTimer !== null) window.clearTimeout(initialScrollTimer)
+})
+
+watch(() => props.scrollElement, (element) => {
+  if (element === null) return
+  window.requestAnimationFrame(() => {
+    element.scrollTop = 0
+  })
+}, { flush: 'post' })
 </script>
 
 <template>
   <section class="dsh-conversation-feed" aria-label="Conversation stream">
-    <div ref="feedList" class="dsh-conversation-feed-list">
+    <div class="dsh-conversation-feed-list">
       <div
         class="dsh-conversation-feed-spacer"
         :style="{ '--dsh-feed-total-size': `${totalSize}px` }"
@@ -159,8 +285,21 @@ const totalSize = computed(() => virtualizer.value.getTotalSize())
             :data-index="virtualRow.index"
             :ref="virtualizer.measureElement"
           >
-            <div class="dsh-feed-message-bubble">{{ virtualRow.entry.text }}</div>
-            <span class="dsh-feed-message-time">刚刚</span>
+            <div class="dsh-feed-user-stack">
+              <div v-if="virtualRow.entry.attachment" class="dsh-feed-attachment-card">
+                <AppIcon name="file-text" :size="18" />
+                <span class="dsh-feed-attachment-copy">
+                  <strong>{{ virtualRow.entry.attachment.name }}</strong>
+                  <small>{{ virtualRow.entry.attachment.meta }}</small>
+                </span>
+              </div>
+              <button v-if="virtualRow.entry.attachment" class="dsh-feed-attachment-action" type="button">查看文件</button>
+              <div class="dsh-feed-message-bubble">{{ virtualRow.entry.text }}</div>
+              <div class="dsh-feed-message-meta">
+                <span>刚刚</span>
+                <AppIcon name="copy" :size="14" />
+              </div>
+            </div>
           </article>
           <article
             v-else-if="virtualRow.entry.role === 'assistant'"
@@ -168,35 +307,59 @@ const totalSize = computed(() => virtualizer.value.getTotalSize())
             :data-index="virtualRow.index"
             :ref="virtualizer.measureElement"
           >
-            <div class="dsh-feed-avatar" aria-hidden="true">O</div>
             <div class="dsh-feed-message-copy">
-              <strong>Omp Desktop</strong>
               <p>{{ virtualRow.entry.text }}</p>
             </div>
           </article>
+          <section
+            v-else-if="virtualRow.entry.role === 'tool-group'"
+            class="dsh-feed-tool-group"
+            :data-index="virtualRow.index"
+            :ref="virtualizer.measureElement"
+          >
+            <AppIcon name="chevron-down" :size="14" aria-hidden="true" />
+            <span class="dsh-feed-tool-group-label">{{ virtualRow.entry.label }}</span>
+            <span class="dsh-feed-tool-group-line" aria-hidden="true" />
+          </section>
           <details
             v-else
             class="dsh-feed-tool"
             :data-index="virtualRow.index"
-            :ref="virtualizer.measureElement"
-            :class="{ 'dsh-feed-tool-running': virtualRow.entry.state === 'running' }"
+            :class="{ 'dsh-feed-tool-running': virtualRow.entry.state === 'running', 'dsh-feed-tool-error': virtualRow.entry.state === 'error' }"
             :open="openToolIds.has(virtualRow.entry.id)"
             @toggle="updateToolOpenState(virtualRow.entry.id, $event)"
+            :ref="virtualizer.measureElement"
           >
             <summary>
               <span class="dsh-feed-tool-leading" aria-hidden="true">
-                <span class="dsh-feed-tool-dot" />
-                <span class="dsh-feed-tool-chevron">›</span>
+                <AppIcon name="chevron-right" class="dsh-feed-tool-chevron" :size="14" aria-hidden="true" />
+                <AppIcon :name="virtualRow.entry.icon" class="dsh-feed-tool-icon" :size="14" />
               </span>
               <strong>{{ virtualRow.entry.title }}</strong>
               <span class="dsh-feed-tool-separator" aria-hidden="true" />
               <span class="dsh-feed-tool-summary">{{ virtualRow.entry.summary }}</span>
-              <span class="dsh-feed-tool-state">{{ virtualRow.entry.state === 'running' ? 'Running' : 'Done' }}</span>
+              <span class="dsh-feed-tool-state">{{ toolStateLabel(virtualRow.entry.state) }}</span>
             </summary>
-            <pre :class="{ 'dsh-feed-code-block': virtualRow.entry.kind === 'code' }"><code>{{ virtualRow.entry.body }}</code></pre>
+            <SourceCodeBlock
+              v-if="virtualRow.entry.kind === 'code'"
+              :code="virtualRow.entry.body"
+              :language="virtualRow.entry.language"
+              :copy-label="copy.toolCopy"
+              :copied-label="copy.toolCopied"
+            />
+            <SourceTerminalBlock
+              v-else
+              :command="virtualRow.entry.command ?? virtualRow.entry.title"
+              :cwd="virtualRow.entry.cwd"
+              :output="virtualRow.entry.body"
+              :status="virtualRow.entry.state"
+              :copy-label="copy.toolCopy"
+              :copied-label="copy.toolCopied"
+            />
           </details>
         </div>
       </div>
     </div>
   </section>
 </template>
+

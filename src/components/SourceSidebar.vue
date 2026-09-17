@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onUnmounted, ref } from 'vue'
 
 import { useAppSettings } from '../stores/appSettings'
 import { AppIcon } from './icons'
@@ -36,28 +36,24 @@ const emit = defineEmits<{
 const demoProjects: readonly DemoProject[] = [
   {
     id: 'omp-desktop',
-    name: 'Omp Desktop',
-    path: 'C:\\project\\Omp-Desktop',
+    name: 'omp-tauri-des',
+    path: 'C:\\project\\omp-tauri-des',
     sessions: [
-      { id: 'session-omp-build', title: '首页 Composer 优化', time: '现在' },
-      { id: 'session-omp-settings', title: '常规设置功能', time: '12 分钟' },
+      { id: 'session-omp-build', title: '评估OMPSDK项目集成可...', time: '1小时' },
     ],
   },
   {
-    id: 'deepseek-harness',
-    name: 'deepseek-harness',
-    path: 'C:\\project\\deepseek-harness',
+    id: 'codex',
+    name: 'Codex',
+    path: 'C:\\Users\\Administrator\\Documents\\Codex',
     sessions: [
-      { id: 'session-harness-ui', title: '检查 UI 信息流', time: '昨天' },
-      { id: 'session-harness-tools', title: '工具调用输出', time: '周一' },
-    ],
-  },
-  {
-    id: 'scratch',
-    name: '实验项目',
-    path: 'D:\\workspace\\scratch',
-    sessions: [
-      { id: 'session-scratch', title: '整理实验代码', time: '上周' },
+      { id: 'session-codex-source', title: '查找项目源码与前端位置', time: '1小时' },
+      { id: 'session-codex-fun', title: '你好彩票娱乐', time: '1小时' },
+      { id: 'session-codex-thinking', title: '询问AI的思考等级', time: '14天' },
+      { id: 'session-codex-chinese', title: '中文问候你好', time: '14天' },
+      { id: 'session-codex-hello', title: '你好', time: '14天' },
+      { id: 'session-codex-layout', title: '检查前端界面布局', time: '14天' },
+      { id: 'session-codex-files', title: '整理项目文件', time: '14天' },
     ],
   },
 ]
@@ -65,6 +61,10 @@ const demoProjects: readonly DemoProject[] = [
 const searchExpanded = ref(false)
 const query = ref('')
 const workspaceMenuOpen = ref(false)
+const projectMenuOpenId = ref<string | null>(null)
+const projectHoverId = ref<string | null>(null)
+const projectHoverTop = ref(0)
+const projectHoverTimer = ref<number | null>(null)
 const searchInput = ref<HTMLInputElement | null>(null)
 const expandedProjectIds = ref(demoProjects.map((project) => project.id))
 
@@ -87,8 +87,36 @@ const visibleProjects = computed(() => {
 
 const hasVisibleSessions = computed(() => visibleProjects.value.length > 0)
 
+const expandedSessionProjectIds = ref<string[]>([])
+
+function visibleSessions(project: DemoProject): readonly DemoSession[] {
+  return expandedSessionProjectIds.value.includes(project.id) ? project.sessions : project.sessions.slice(0, 5)
+}
+
+function hiddenSessionCount(project: DemoProject): number {
+  return Math.max(0, project.sessions.length - 5)
+}
+
+function sessionOverflowLabel(project: DemoProject): string {
+  return expandedSessionProjectIds.value.includes(project.id)
+    ? copy.value.collapseSessions
+    : copy.value.expandSessions.replace('{count}', String(hiddenSessionCount(project)))
+}
+
+function toggleSessionOverflow(projectId: string): void {
+  expandedSessionProjectIds.value = expandedSessionProjectIds.value.includes(projectId)
+    ? expandedSessionProjectIds.value.filter((id) => id !== projectId)
+    : [...expandedSessionProjectIds.value, projectId]
+}
+
+function isProjectActive(project: DemoProject): boolean {
+  if (props.activeSessionId === null) return project.id === 'codex'
+  return project.sessions.some((session) => session.id === props.activeSessionId)
+}
+
 function startSession() {
   workspaceMenuOpen.value = false
+  projectMenuOpenId.value = null
   emit('newSession')
 }
 
@@ -97,10 +125,47 @@ function selectSession(sessionId: string) {
 }
 
 function toggleProject(projectId: string) {
+  projectMenuOpenId.value = null
   expandedProjectIds.value = expandedProjectIds.value.includes(projectId)
     ? expandedProjectIds.value.filter((id) => id !== projectId)
     : [...expandedProjectIds.value, projectId]
 }
+
+function toggleProjectMenu(projectId: string) {
+  workspaceMenuOpen.value = false
+  projectMenuOpenId.value = projectMenuOpenId.value === projectId ? null : projectId
+}
+
+function closeProjectMenu() {
+  projectMenuOpenId.value = null
+}
+
+function clearProjectHoverTimer(): void {
+  if (projectHoverTimer.value === null) return
+  window.clearTimeout(projectHoverTimer.value)
+  projectHoverTimer.value = null
+}
+
+function showProjectHover(projectId: string, event: MouseEvent): void {
+  if (props.collapsed) return
+  const target = event.currentTarget
+  if (!(target instanceof HTMLElement)) return
+  clearProjectHoverTimer()
+  projectHoverTimer.value = window.setTimeout(() => {
+    projectHoverId.value = projectId
+    projectHoverTop.value = target.getBoundingClientRect().top
+    projectHoverTimer.value = null
+  }, 1000)
+}
+
+function hideProjectHover(): void {
+  clearProjectHoverTimer()
+  projectHoverId.value = null
+}
+
+onUnmounted(() => {
+  clearProjectHoverTimer()
+})
 
 function isProjectExpanded(projectId: string) {
   return expandedProjectIds.value.includes(projectId)
@@ -212,26 +277,83 @@ function addWorkspace() {
 
         <div class="dsh-workspace-list" :class="{ 'dsh-workspace-list-quiet': !hasVisibleSessions }">
           <template v-if="hasVisibleSessions">
-            <section v-for="project in visibleProjects" :key="project.id" class="dsh-workspace-project">
-              <button
+            <section
+              v-for="project in visibleProjects"
+              :key="project.id"
+              class="dsh-workspace-project"
+            >
+              <div
                 class="dsh-workspace-project-row"
-                type="button"
+                :class="{ 'dsh-workspace-project-row-menu-open': projectMenuOpenId === project.id, 'dsh-workspace-project-row-active': isProjectActive(project) }"
+                role="treeitem"
                 :aria-expanded="isProjectExpanded(project.id)"
-                :title="project.path"
+                @mouseenter="showProjectHover(project.id, $event)"
+                @mouseleave="hideProjectHover"
                 @click="toggleProject(project.id)"
               >
-                <AppIcon name="folder" :size="15" />
-                <span class="dsh-workspace-project-name">{{ project.name }}</span>
-                <AppIcon
-                  name="chevron-right"
-                  :size="13"
-                  class="dsh-workspace-project-chevron"
-                  :class="{ 'dsh-workspace-project-chevron-open': isProjectExpanded(project.id) }"
-                />
-              </button>
+                <button
+                  class="dsh-workspace-project-toggle"
+                  type="button"
+                  :aria-expanded="isProjectExpanded(project.id)"
+                  @click.stop="toggleProject(project.id)"
+                >
+                  <span class="dsh-workspace-project-leading" aria-hidden="true">
+                    <AppIcon :name="isProjectExpanded(project.id) ? 'folder-open' : 'folder'" class="dsh-workspace-project-folder" :size="15" />
+                    <AppIcon
+                      name="chevron-right"
+                      :size="13"
+                      class="dsh-workspace-project-chevron"
+                      :class="{ 'dsh-workspace-project-chevron-open': isProjectExpanded(project.id) }"
+                    />
+                  </span>
+                  <span class="dsh-workspace-project-name">{{ project.name }}</span>
+                </button>
+                <div class="dsh-workspace-project-actions">
+                  <button
+                    class="dsh-workspace-project-action"
+                    type="button"
+                    :aria-label="`${copy.openMoreActions}: ${project.name}`"
+                    @click.stop="toggleProjectMenu(project.id)"
+                  >
+                    <AppIcon name="more-horizontal" :size="15" />
+                  </button>
+                  <button
+                    class="dsh-workspace-project-action"
+                    type="button"
+                    :aria-label="`${copy.newSessionLabel}: ${project.name}`"
+                    @click.stop="startSession"
+                  >
+                    <AppIcon name="plus" :size="15" />
+                  </button>
+                </div>
+                <div v-if="projectMenuOpenId === project.id" class="dsh-workspace-project-menu" role="menu" @click.stop>
+                  <button type="button" role="menuitem" @click="closeProjectMenu">{{ copy.viewOptions }}</button>
+                </div>
+              </div>
+              <Teleport to="body">
+                <div
+                  v-if="projectHoverId === project.id && !props.collapsed"
+                  class="dsh-workspace-hover-card"
+                  role="tooltip"
+                  :style="{ top: `${projectHoverTop}px` }"
+                >
+                  <strong>{{ project.name }}</strong>
+                  <span>{{ project.path }}</span>
+                  <span>创建于 2026年9月3日 08:57</span>
+                </div>
+              </Teleport>
               <div v-if="isProjectExpanded(project.id)" class="dsh-workspace-session-list">
                 <button
-                  v-for="session in project.sessions"
+                  v-if="props.activeSessionId === null && project.id === 'codex'"
+                  class="dsh-workspace-session-row dsh-workspace-session-row-active dsh-workspace-session-row-new"
+                  type="button"
+                  aria-current="page"
+                  @click="startSession"
+                >
+                  <span class="dsh-workspace-session-title">{{ copy.newSession }}</span>
+                </button>
+                <button
+                  v-for="session in visibleSessions(project)"
                   :key="session.id"
                   class="dsh-workspace-session-row"
                   :class="{ 'dsh-workspace-session-row-active': props.activeSessionId === session.id }"
@@ -239,9 +361,16 @@ function addWorkspace() {
                   :aria-current="props.activeSessionId === session.id ? 'page' : undefined"
                   @click="selectSession(session.id)"
                 >
-                  <span class="dsh-workspace-session-dot" aria-hidden="true" />
                   <span class="dsh-workspace-session-title">{{ session.title }}</span>
                   <span class="dsh-workspace-session-time">{{ session.time }}</span>
+                </button>
+                <button
+                  v-if="project.sessions.length > 5"
+                  class="dsh-workspace-session-overflow"
+                  type="button"
+                  @click="toggleSessionOverflow(project.id)"
+                >
+                  {{ sessionOverflowLabel(project) }}
                 </button>
               </div>
             </section>

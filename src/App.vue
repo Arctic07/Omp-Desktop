@@ -7,7 +7,7 @@ import SourceSidebar from './components/SourceSidebar.vue'
 
 const sidebarCollapsed = ref(false)
 const settingsOpen = ref(false)
-const activeSessionId = ref<string | null>('session-omp-build')
+const activeSessionId = ref<string | null>('session-codex-source')
 
 function startNewSession() {
   activeSessionId.value = null
