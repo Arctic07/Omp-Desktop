@@ -1,82 +1,96 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-
-import { getSingletonHighlighter, type BundledLanguage } from 'shiki'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 import { useAppSettings } from '../stores/appSettings'
+import { copyText } from '../utils/clipboard'
+import {
+  highlightSourceCode,
+  resolveSourceSyntaxLanguage,
+  type SourceHighlightedToken,
+  type SourceSyntaxTheme,
+} from '../utils/sourceSyntaxHighlighter'
 
 interface SourceCodeBlockProps {
   code: string
   language?: string
   copyLabel?: string
   copiedLabel?: string
+  copyFailedLabel?: string
 }
 
 const props = withDefaults(defineProps<SourceCodeBlockProps>(), {
   language: 'text',
   copyLabel: 'Copy',
   copiedLabel: 'Copied',
+  copyFailedLabel: 'Copy failed',
 })
 
 const { settings } = useAppSettings()
 const copied = ref(false)
-const highlightedCode = ref('')
+const copyError = ref(false)
+const highlightedLines = ref<readonly (readonly SourceHighlightedToken[])[]>([])
 let renderRequest = 0
+let copyTimer: number | null = null
 
-const languageAliases: Record<string, BundledLanguage> = {
-  bash: 'bash',
-  javascript: 'javascript',
-  js: 'javascript',
-  json: 'json',
-  powershell: 'powershell',
-  pwsh: 'powershell',
-  sh: 'bash',
-  shell: 'bash',
-  ts: 'typescript',
-  typescript: 'typescript',
-}
-
-const resolvedLanguage = computed<BundledLanguage | null>(() => {
-  const normalized = props.language.trim().toLowerCase()
-  return languageAliases[normalized] ?? null
-})
-
-const themeName = computed(() => {
-  if (typeof document === 'undefined') return 'github-dark'
-  return document.body.hasAttribute('data-ds-dark-theme') ? 'github-dark' : 'github-light'
+const resolvedLanguage = computed(() => resolveSourceSyntaxLanguage(props.language))
+const themeName = computed<SourceSyntaxTheme>(() => {
+  if (settings.theme === 'dark') {
+    return 'github-dark'
+  }
+  if (settings.theme === 'light') {
+    return 'github-light'
+  }
+  if (typeof document !== 'undefined' && document.body.hasAttribute('data-ds-dark-theme')) {
+    return 'github-dark'
+  }
+  return 'github-light'
 })
 
 async function renderCode(): Promise<void> {
   const request = ++renderRequest
-  highlightedCode.value = ''
-  if (resolvedLanguage.value === null) return
+  highlightedLines.value = []
+  if (resolvedLanguage.value === null) {
+    return
+  }
+
   try {
-    const highlighter = await getSingletonHighlighter({
-      langs: ['json', 'typescript', 'javascript', 'bash', 'powershell'],
-      themes: ['github-dark', 'github-light'],
-    })
-    if (request !== renderRequest) return
-    highlightedCode.value = highlighter.codeToHtml(props.code, {
-      lang: resolvedLanguage.value,
-      theme: themeName.value,
-    })
+    const lines = await highlightSourceCode(props.code, resolvedLanguage.value, themeName.value)
+    if (request === renderRequest) {
+      highlightedLines.value = lines
+    }
   } catch {
-    if (request === renderRequest) highlightedCode.value = ''
+    if (request === renderRequest) {
+      highlightedLines.value = []
+    }
   }
 }
 
-async function copyCode(): Promise<void> {
-  try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard !== undefined) {
-      await navigator.clipboard.writeText(props.code)
-    }
-    copied.value = true
-  } catch {
-    copied.value = false
+function clearCopyTimer(): void {
+  if (copyTimer === null) {
+    return
   }
-  window.setTimeout(() => {
+  window.clearTimeout(copyTimer)
+  copyTimer = null
+}
+
+async function copyCode(): Promise<void> {
+  clearCopyTimer()
+  copied.value = false
+  copyError.value = false
+  if (!(await copyText(props.code))) {
+    copyError.value = true
+    return
+  }
+
+  copied.value = true
+  copyTimer = window.setTimeout(() => {
     copied.value = false
+    copyTimer = null
   }, 1600)
+}
+
+function tokenStyle(token: SourceHighlightedToken): { color?: string } | undefined {
+  return token.color === undefined ? undefined : { color: token.color }
 }
 
 watch(
@@ -84,18 +98,30 @@ watch(
   () => { void renderCode() },
   { immediate: true },
 )
+
+onUnmounted(() => {
+  renderRequest += 1
+  clearCopyTimer()
+})
 </script>
 
 <template>
   <article class="omp-source-code-block" data-code-block :data-language="props.language">
     <header class="omp-source-code-block-banner">
       <span>{{ props.language }}</span>
-      <button type="button" @click="copyCode">{{ copied ? props.copiedLabel : props.copyLabel }}</button>
+      <button
+        type="button"
+        :aria-label="copied ? props.copiedLabel : props.copyLabel"
+        @click="copyCode"
+      >
+        {{ copied ? props.copiedLabel : props.copyLabel }}
+      </button>
     </header>
     <div class="omp-source-code-block-body">
-      <div v-if="highlightedCode" class="omp-source-code-block-highlighted" v-html="highlightedCode" />
+      <pre v-if="highlightedLines.length > 0"><code><template v-for="(line, lineIndex) in highlightedLines" :key="lineIndex"><span class="omp-source-code-block-line"><span v-for="(token, tokenIndex) in line" :key="`${lineIndex}-${tokenIndex}`" :style="tokenStyle(token)">{{ token.content }}</span></span><template v-if="lineIndex < highlightedLines.length - 1">{{ '\n' }}</template></template></code></pre>
       <pre v-else><code>{{ props.code }}</code></pre>
     </div>
+    <p v-if="copyError" class="omp-source-code-block-error" role="alert">{{ props.copyFailedLabel }}</p>
   </article>
 </template>
 
@@ -158,5 +184,17 @@ watch(
 .omp-source-code-block-body :deep(pre code),
 .omp-source-code-block-body > pre code {
   font: inherit;
+}
+
+.omp-source-code-block-line {
+  display: inline;
+}
+
+.omp-source-code-block-error {
+  margin: 0;
+  padding: 6px 14px 9px;
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 11px;
+  line-height: 16px;
 }
 </style>

@@ -1,23 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 
 import type { SourceSettingsSkillsCopy } from '../../i18n'
+import { useAppSettings } from '../../stores/appSettings'
 import { AppIcon } from '../icons'
 
 const props = defineProps<{
   copy: SourceSettingsSkillsCopy
 }>()
 
-const enabledSkills = ref(new Set(props.copy.skills.slice(0, 2).map((skill) => skill.id)))
+const { settings, setEnabledSkills } = useAppSettings()
+const enabledSkills = computed<Set<string>>(() => new Set(settings.enabledSkills))
 
-function toggleSkill(skillId: string) {
+function toggleSkill(skillId: string): void {
   const nextSkills = new Set(enabledSkills.value)
   if (nextSkills.has(skillId)) {
     nextSkills.delete(skillId)
   } else {
     nextSkills.add(skillId)
   }
-  enabledSkills.value = nextSkills
+  setEnabledSkills([...nextSkills])
 }
 </script>
 

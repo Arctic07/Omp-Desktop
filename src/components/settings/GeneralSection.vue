@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed } from 'vue'
 
 import { APP_FONT_SIZE_MAX, APP_FONT_SIZE_MIN, useAppSettings } from '../../stores/appSettings'
 import type { SourcePermissionMode, SourceSettingsGeneralCopy } from '../../i18n'
@@ -9,7 +9,6 @@ const props = defineProps<{
   copy: SourceSettingsGeneralCopy
 }>()
 
-const permissionMode = ref<SourcePermissionMode>('ask')
 const {
   settings,
   setLanguage,
@@ -17,20 +16,29 @@ const {
   setFontSize,
   setConversationDensity,
   setBusyBehavior,
+  setPermissionMode,
 } = useAppSettings()
+const permissionMode = computed<SourcePermissionMode>({
+  get: () => settings.permissionMode,
+  set: setPermissionMode,
+})
 
-function handleLanguageChange(event: Event) {
-  const value = (event.target as HTMLSelectElement).value
+function handleLanguageChange(event: Event): void {
+  const target = event.currentTarget
+  if (!(target instanceof HTMLSelectElement)) {
+    return
+  }
+  const value = target.value
   if (value === 'en' || value === 'zh') {
     setLanguage(value)
   }
 }
 
-function decreaseFontSize() {
+function decreaseFontSize(): void {
   setFontSize(settings.fontSize - 1)
 }
 
-function increaseFontSize() {
+function increaseFontSize(): void {
   setFontSize(settings.fontSize + 1)
 }
 </script>

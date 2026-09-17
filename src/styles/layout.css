@@ -1,4 +1,7 @@
 .omp-frame {
+  --omp-work-panel-min-width: 420px;
+  --omp-work-panel-max-width: 640px;
+  --omp-work-panel-overlay-max-width: 360px;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   width: 100%;
@@ -11,11 +14,43 @@
 .omp-frame-sidebar-collapsed {
   grid-template-columns: 56px minmax(0, 1fr);
 }
+.omp-frame-right-panel-open {
+  grid-template-columns: 280px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), var(--omp-work-panel-max-width));
+}
+
+.omp-frame-sidebar-collapsed.omp-frame-right-panel-open {
+  grid-template-columns: 56px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), var(--omp-work-panel-max-width));
+}
 
 .omp-sidebar-column {
   min-width: 0;
   overflow: hidden;
   border-right: 1px solid var(--dsw-alias-border-l2);
+}
+
+@media (max-width: 1023px) {
+  .omp-frame-right-panel-open,
+  .omp-frame-sidebar-collapsed.omp-frame-right-panel-open {
+    --omp-work-panel-max-width: max(var(--omp-work-panel-min-width), 36vw);
+    grid-template-columns: 56px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), var(--omp-work-panel-max-width));
+  }
+}
+
+@media (max-width: 680px) {
+  .omp-frame-right-panel-open,
+  .omp-frame-sidebar-collapsed.omp-frame-right-panel-open {
+    position: relative;
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .omp-frame-right-panel-open > .omp-work-panel {
+    position: absolute;
+    z-index: 20;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(calc(100% - 56px), var(--omp-work-panel-overlay-max-width));
+  }
 }
 
 .omp-center-column {

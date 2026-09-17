@@ -58,14 +58,14 @@ const emit = defineEmits<{
           </p>
         </template>
 
-        <GeneralSection v-if="activeSection === 'general'" :copy="copy.settingsPage.general" />
-        <ModelsSection v-else-if="activeSection === 'models'" :copy="copy.settingsPage.models" />
-        <AgentModesSection v-else-if="activeSection === 'agent-modes'" :copy="copy.settingsPage.agentModes" />
-        <SkillsSection v-else-if="activeSection === 'skills'" :copy="copy.settingsPage.skills" />
-        <PluginsSection v-else-if="activeSection === 'plugins'" :copy="copy.settingsPage.plugins" />
-        <SessionsSection v-else-if="activeSection === 'sessions'" :copy="copy.settingsPage.sessions" />
-        <AppearanceSection v-else-if="activeSection === 'appearance'" :copy="copy.settingsPage.appearance" />
-        <AboutSection v-else :copy="copy.settingsPage.about" />
+        <GeneralSection v-show="activeSection === 'general'" :copy="copy.settingsPage.general" />
+        <ModelsSection v-show="activeSection === 'models'" :copy="copy.settingsPage.models" />
+        <AgentModesSection v-show="activeSection === 'agent-modes'" :copy="copy.settingsPage.agentModes" />
+        <SkillsSection v-show="activeSection === 'skills'" :copy="copy.settingsPage.skills" />
+        <PluginsSection v-show="activeSection === 'plugins'" :copy="copy.settingsPage.plugins" />
+        <SessionsSection v-show="activeSection === 'sessions'" :copy="copy.settingsPage.sessions" />
+        <AppearanceSection v-show="activeSection === 'appearance'" :copy="copy.settingsPage.appearance" />
+        <AboutSection v-show="activeSection === 'about'" :copy="copy.settingsPage.about" />
       </div>
     </div>
   </section>
