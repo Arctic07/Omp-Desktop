@@ -148,6 +148,9 @@
   padding-left: 4px;
   overflow: hidden;
 }
+.omp-sidebar-collapsed .omp-sidebar-region {
+  display: none;
+}
 .omp-workspace-browser {
   flex: 1;
   min-height: 0;
