@@ -13,9 +13,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  newSession: []
-  selectSession: [sessionId: string]
-  addWorkspace: []
+  'new-session': []
+  'select-session': [sessionId: string]
+  'add-workspace': []
 }>()
 
 const { copy } = useAppSettings()
@@ -80,7 +80,7 @@ function closeSearch(): void {
 
 function addWorkspace(): void {
   workspaceMenuOpen.value = false
-  emit('addWorkspace')
+  emit('add-workspace')
 }
 </script>
 
@@ -151,8 +151,8 @@ function addWorkspace(): void {
           :expanded="expandedProjectIds.has(project.id)"
           :session-overflow-expanded="expandedSessionProjectIds.has(project.id)"
           @toggle="toggleProject(project.id)"
-          @new-session="emit('newSession')"
-          @select-session="emit('selectSession', $event)"
+          @new-session="emit('new-session')"
+          @select-session="emit('select-session', $event)"
           @toggle-session-overflow="toggleSessionOverflow(project.id)"
         />
       </template>

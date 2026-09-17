@@ -14,13 +14,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   toggle: []
-  newSession: []
-  selectSession: [sessionId: string]
-  toggleSessionOverflow: []
+  'new-session': []
+  'select-session': [sessionId: string]
+  'toggle-session-overflow': []
 }>()
 
 const { copy } = useAppSettings()
-
 const visibleSessions = computed<readonly WorkspaceSession[]>(() => (
   props.sessionOverflowExpanded ? props.project.sessions : props.project.sessions.slice(0, 5)
 ))
@@ -36,18 +35,15 @@ const activeProject = computed<boolean>(() => {
   }
   return props.project.sessions.some((session) => session.id === props.activeSessionId)
 })
-
 </script>
 
 <template>
   <section class="omp-workspace-project" :class="{ 'omp-workspace-project-active': activeProject }">
-    <div
-      class="omp-workspace-project-row"
-      :class="{ 'omp-workspace-project-row-active': activeProject }"
-    >
+    <div class="omp-workspace-project-row" :class="{ 'omp-workspace-project-row-active': activeProject }">
       <button
         class="omp-workspace-project-toggle"
         type="button"
+        :aria-expanded="props.expanded"
         :aria-label="`${props.expanded ? copy.collapseWorkspace : copy.expandWorkspace}: ${props.project.name}`"
         :title="props.project.path"
         @click="emit('toggle')"
@@ -68,7 +64,7 @@ const activeProject = computed<boolean>(() => {
         type="button"
         :aria-label="`${copy.newSessionLabel}: ${props.project.name}`"
         :title="copy.newSessionLabel"
-        @click="emit('newSession')"
+        @click="emit('new-session')"
       >
         <AppIcon name="plus" :size="15" aria-hidden="true" />
       </button>
@@ -80,7 +76,7 @@ const activeProject = computed<boolean>(() => {
         class="omp-workspace-session-row omp-workspace-session-row-active omp-workspace-session-row-new"
         type="button"
         aria-current="page"
-        @click="emit('newSession')"
+        @click="emit('new-session')"
       >
         <span class="omp-workspace-session-title">{{ copy.newSession }}</span>
       </button>
@@ -91,7 +87,7 @@ const activeProject = computed<boolean>(() => {
         :class="{ 'omp-workspace-session-row-active': props.activeSessionId === session.id }"
         type="button"
         :aria-current="props.activeSessionId === session.id ? 'page' : undefined"
-        @click="emit('selectSession', session.id)"
+        @click="emit('select-session', session.id)"
       >
         <span class="omp-workspace-session-title">{{ session.title }}</span>
         <span class="omp-workspace-session-time">{{ session.time }}</span>
@@ -100,7 +96,7 @@ const activeProject = computed<boolean>(() => {
         v-if="hiddenSessionCount > 0"
         class="omp-workspace-session-overflow"
         type="button"
-        @click="emit('toggleSessionOverflow')"
+        @click="emit('toggle-session-overflow')"
       >
         {{ overflowLabel }}
       </button>

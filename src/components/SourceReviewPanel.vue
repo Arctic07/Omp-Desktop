@@ -3,6 +3,7 @@ import { toRef } from 'vue'
 
 import { useWorkspaceReviewPanel } from '../composables/useWorkspaceReviewPanel'
 import type { ReviewDiffTarget } from '../utils/desktopApi'
+import SourceReviewChanges from './SourceReviewChanges.vue'
 import { AppIcon } from './icons'
 
 interface SourceReviewPanelProps {
@@ -42,18 +43,9 @@ const {
   isSectionExpanded,
   toggleSection,
   isActionActive,
-  sectionActionKey,
   runSectionAction,
-  fileKey,
-  fileDetailsId,
-  fileActionKey,
   isFileExpanded,
   toggleFile,
-  fileToggleLabel,
-  fileOpenLabel,
-  hunkKey,
-  linePrefix,
-  statusLetter,
   openFile,
   runFileAction,
 } = useWorkspaceReviewPanel(toRef(props, 'workspacePath'), {
@@ -142,114 +134,22 @@ const {
             <AppIcon name="circle-check" :size="22" aria-hidden="true" />
             <strong>{{ review.clean ? copy.reviewClean : copy.reviewNoChanges }}</strong>
           </div>
-          <div v-else class="omp-source-review-sections">
-            <p v-if="review.truncated" class="omp-source-review-truncated" role="note">
-              {{ copy.reviewTruncated }}
-            </p>
-            <div class="omp-source-review-total" role="status" aria-live="polite">
-              <span>{{ changedLabel }}</span>
-              <span class="omp-source-review-total-stats">
-                <span class="omp-source-review-additions">+{{ totalAdditions }}</span>
-                <span class="omp-source-review-deletions">−{{ totalDeletions }}</span>
-              </span>
-            </div>
-            <section v-for="section in reviewSections" :key="section.id" class="omp-source-review-section">
-              <header class="omp-source-review-section-header">
-                <button
-                  class="omp-source-review-section-toggle"
-                  type="button"
-                  :aria-expanded="isSectionExpanded(section.id)"
-                  :aria-controls="`omp-source-review-${section.id}-files`"
-                  @click="toggleSection(section.id)"
-                >
-                  <AppIcon
-                    name="chevron-right"
-                    class="omp-source-review-chevron"
-                    :class="{ 'omp-source-review-chevron-open': isSectionExpanded(section.id) }"
-                    :size="13"
-                    aria-hidden="true"
-                  />
-                  <strong>{{ section.label }}</strong>
-                  <span class="omp-source-review-section-count">{{ section.files.length }}</span>
-                  <span class="omp-source-review-section-stats">
-                    <span class="omp-source-review-additions">+{{ section.additions }}</span>
-                    <span class="omp-source-review-deletions">−{{ section.deletions }}</span>
-                  </span>
-                </button>
-                <button
-                  class="omp-source-review-section-action"
-                  type="button"
-                  :aria-label="section.actionLabel"
-                  :title="section.actionLabel"
-                  :disabled="section.files.length === 0 || gitOperationBusy"
-                  @click="runSectionAction(section.id)"
-                >
-                  <AppIcon :name="isActionActive(sectionActionKey(section.id)) ? 'refresh-cw' : section.actionIcon" :class="{ 'omp-source-review-spin': isActionActive(sectionActionKey(section.id)) }" :size="14" aria-hidden="true" />
-                </button>
-              </header>
-              <div v-if="isSectionExpanded(section.id)" :id="`omp-source-review-${section.id}-files`" class="omp-source-review-files" role="list">
-                <article v-for="(file, index) in section.files" :key="fileKey(section.id, file)" class="omp-source-review-file" role="listitem">
-                  <header class="omp-source-review-file-header">
-                    <button
-                      class="omp-source-review-expand"
-                      type="button"
-                      :aria-expanded="isFileExpanded(section.id, file)"
-                      :aria-controls="fileDetailsId(section.id, index)"
-                      :aria-label="fileToggleLabel(section.id, file)"
-                      :title="fileToggleLabel(section.id, file)"
-                      @click="toggleFile(section.id, file)"
-                    >
-                      <AppIcon
-                        name="chevron-right"
-                        class="omp-source-review-chevron"
-                        :class="{ 'omp-source-review-chevron-open': isFileExpanded(section.id, file) }"
-                        :size="12"
-                        aria-hidden="true"
-                      />
-                    </button>
-                    <button class="omp-source-review-file-path" type="button" :aria-label="fileOpenLabel(file)" :title="fileOpenLabel(file)" @click="openFile(section.id, file)">
-                      <span class="omp-source-review-status" :class="`omp-source-review-status-${file.status}`" aria-hidden="true">{{ statusLetter(file) }}</span>
-                      <span class="omp-source-review-path-copy">
-                        <span v-if="file.oldPath" class="omp-source-review-old-path">{{ file.oldPath }} →</span>
-                        <span class="omp-source-review-path">{{ file.path }}</span>
-                      </span>
-                    </button>
-                    <span class="omp-source-review-counts" :aria-label="`+${file.additions}, -${file.deletions}`">
-                      <span class="omp-source-review-additions">+{{ file.additions }}</span>
-                      <span class="omp-source-review-deletions">−{{ file.deletions }}</span>
-                    </span>
-                    <button
-                      class="omp-source-review-file-action"
-                      type="button"
-                      :aria-label="section.id === 'staged' ? copy.reviewUnstage : copy.reviewStage"
-                      :title="section.id === 'staged' ? copy.reviewUnstage : copy.reviewStage"
-                      :disabled="gitOperationBusy"
-                      @click.stop="runFileAction(section.id, file)"
-                    >
-                      <AppIcon :name="isActionActive(fileActionKey(section.id, file)) ? 'refresh-cw' : section.actionIcon" :class="{ 'omp-source-review-spin': isActionActive(fileActionKey(section.id, file)) }" :size="13" aria-hidden="true" />
-                    </button>
-                  </header>
-
-                  <div v-if="isFileExpanded(section.id, file)" :id="fileDetailsId(section.id, index)" class="omp-source-review-file-details">
-                    <p v-if="file.binary" class="omp-source-review-file-message">{{ copy.reviewBinary }}</p>
-                    <p v-else-if="file.tooLarge" class="omp-source-review-file-message">{{ copy.reviewTooLarge }}</p>
-                    <template v-else-if="file.hunks.length > 0">
-                      <section v-for="(hunk, hunkIndex) in file.hunks" :key="hunkKey(section.id, file, hunk, hunkIndex)" class="omp-source-review-hunk">
-                        <h3 class="omp-source-review-hunk-header">{{ hunk.header }}</h3>
-                        <div class="omp-source-review-lines" role="list">
-                          <div v-for="(line, lineIndex) in hunk.lines" :key="`${hunkKey(section.id, file, hunk, hunkIndex)}:${lineIndex}`" class="omp-source-review-line" :class="`omp-source-review-line-${line.type}`" role="listitem">
-                            <span class="omp-source-review-line-marker" aria-hidden="true">{{ linePrefix(line.type) }}</span>
-                            <code>{{ line.text }}</code>
-                          </div>
-                        </div>
-                      </section>
-                    </template>
-                    <p v-else class="omp-source-review-file-message">{{ copy.reviewNoLineDetails }}</p>
-                  </div>
-                </article>
-              </div>
-            </section>
-          </div>
+          <SourceReviewChanges
+            :sections="reviewSections"
+            :changed-label="changedLabel"
+            :total-additions="totalAdditions"
+            :total-deletions="totalDeletions"
+            :truncated="review.truncated"
+            :git-operation-busy="gitOperationBusy"
+            :is-section-expanded="isSectionExpanded"
+            :is-action-active="isActionActive"
+            :is-file-expanded="isFileExpanded"
+            @toggle-section="toggleSection"
+            @section-action="runSectionAction"
+            @toggle-file="toggleFile"
+            @open-file="openFile"
+            @file-action="runFileAction"
+          />
         </template>
       </template>
       <div v-else class="omp-source-review-state">

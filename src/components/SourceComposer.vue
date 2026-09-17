@@ -55,7 +55,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  requestWorkspace: []
+  'request-workspace': []
   submit: [request: ConversationSubmitRequest]
 }>()
 
@@ -68,6 +68,8 @@ const selectedModelId = ref<ModelId>('gpt-5.6-luna')
 const selectedThinkingId = ref<SourceThinkingLevel>('high')
 const attachments = ref<ComposerAttachment[]>([])
 const dropNotice = ref('')
+const composerCard = ref<HTMLDivElement | null>(null)
+const composerInput = ref<HTMLDivElement | null>(null)
 const canSend = computed<boolean>(() => (
   (draft.value.trim().length > 0 || attachments.value.length > 0) && props.disabled !== true
 ))
@@ -97,7 +99,7 @@ function isDirectoryPath(path: string): boolean {
 
 function requestWorkspace(): void {
   if (props.workspaceTrigger === true) {
-    emit('requestWorkspace')
+    emit('request-workspace')
   }
 }
 

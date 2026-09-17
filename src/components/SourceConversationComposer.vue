@@ -12,7 +12,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  requestWorkspace: []
+  'request-workspace': []
   submit: [request: ConversationSubmitRequest]
 }>()
 
@@ -46,7 +46,7 @@ const { copy } = useAppSettings()
             :aria-label="props.workspacePath ?? copy.chooseWorkspace"
             aria-haspopup="dialog"
             :title="props.workspacePath ?? copy.chooseWorkspace"
-            @click="emit('requestWorkspace')"
+            @click="emit('request-workspace')"
           >
             <AppIcon name="folder" class="omp-hero-workspace-folder" :size="16" aria-hidden="true" />
             <span class="omp-hero-workspace-path">{{ props.workspacePath ?? copy.chooseWorkspace }}</span>
@@ -60,7 +60,7 @@ const { copy } = useAppSettings()
         <SourceComposer
           :disabled="props.sessionId === null && props.workspacePath === null"
           :workspace-trigger="props.sessionId === null && props.workspacePath === null"
-          @request-workspace="emit('requestWorkspace')"
+          @request-workspace="emit('request-workspace')"
           @submit="emit('submit', $event)"
         />
       </div>
