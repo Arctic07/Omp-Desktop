@@ -124,6 +124,14 @@ function addWorkspace(): void {
         <button
           class="omp-workspace-icon-button"
           type="button"
+          :aria-label="copy.viewOptions"
+          :title="copy.viewOptions"
+        >
+          <AppIcon name="sliders-horizontal" :size="16" aria-hidden="true" />
+        </button>
+        <button
+          class="omp-workspace-icon-button"
+          type="button"
           :aria-label="copy.addWorkspace"
           @click="workspaceMenuOpen = !workspaceMenuOpen"
         >
