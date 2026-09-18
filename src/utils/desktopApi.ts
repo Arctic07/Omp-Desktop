@@ -64,6 +64,11 @@ export interface WorkspaceReview {
   error?: string
 }
 
+export interface WorkspaceReviewDelta {
+  stagedFiles: ReviewFile[]
+  unstagedFiles: ReviewFile[]
+}
+
 export type ReviewDiffTarget = {
   section: 'staged' | 'unstaged'
   file: ReviewFile
@@ -100,8 +105,8 @@ export interface DesktopApi {
   readWorkspaceFile: (root: string, path: string) => Promise<FileReadResult>
   revealWorkspaceFile: (root: string, path: string) => Promise<RevealWorkspaceFileResult>
   getWorkspaceReview: (root: string) => Promise<WorkspaceReview>
-  stageWorkspaceFile: (root: string, path: string) => Promise<void>
-  unstageWorkspaceFile: (root: string, path: string) => Promise<void>
+  stageWorkspaceFiles: (root: string, paths: string[]) => Promise<WorkspaceReviewDelta>
+  unstageWorkspaceFiles: (root: string, paths: string[]) => Promise<WorkspaceReviewDelta>
   writeWorkspaceFile: (root: string, path: string, content: string) => Promise<void>
   commitWorkspace: (root: string, message: string) => Promise<void>
   pullWorkspace: (root: string) => Promise<void>
@@ -173,12 +178,12 @@ export async function getWorkspaceReview(root: string): Promise<WorkspaceReview>
   return invoke<WorkspaceReview>('get_workspace_review', { root })
 }
 
-export async function stageWorkspaceFile(root: string, path: string): Promise<void> {
-  await invoke<void>('stage_workspace_file', { root, path })
+export async function stageWorkspaceFiles(root: string, paths: string[]): Promise<WorkspaceReviewDelta> {
+  return invoke<WorkspaceReviewDelta>('stage_workspace_files', { root, paths })
 }
 
-export async function unstageWorkspaceFile(root: string, path: string): Promise<void> {
-  await invoke<void>('unstage_workspace_file', { root, path })
+export async function unstageWorkspaceFiles(root: string, paths: string[]): Promise<WorkspaceReviewDelta> {
+  return invoke<WorkspaceReviewDelta>('unstage_workspace_files', { root, paths })
 }
 
 export async function writeWorkspaceFile(root: string, path: string, content: string): Promise<void> {
@@ -216,8 +221,8 @@ export const desktopApi: DesktopApi = {
   readWorkspaceFile,
   revealWorkspaceFile,
   getWorkspaceReview,
-  stageWorkspaceFile,
-  unstageWorkspaceFile,
+  stageWorkspaceFiles,
+  unstageWorkspaceFiles,
   writeWorkspaceFile,
   commitWorkspace,
   pullWorkspace,

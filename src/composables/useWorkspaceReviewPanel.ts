@@ -5,12 +5,13 @@ import {
   commitWorkspace,
   getWorkspaceReview,
   pullWorkspace,
-  stageWorkspaceFile,
-  unstageWorkspaceFile,
+  stageWorkspaceFiles,
+  unstageWorkspaceFiles,
   type ReviewDiffTarget,
   type ReviewFile,
   type ReviewHunk,
   type WorkspaceReview,
+  type WorkspaceReviewDelta,
 } from '../utils/desktopApi'
 import type { SourceCopy } from '../i18n'
 
@@ -176,6 +177,46 @@ export function useWorkspaceReviewPanel(
     return section === 'staged' ? (review.value?.stagedFiles ?? []) : (review.value?.unstagedFiles ?? [])
   }
 
+  function sortReviewFiles(files: ReviewFile[]): ReviewFile[] {
+    return files.slice().sort((left, right) => {
+      if (left.path < right.path) return -1
+      if (left.path > right.path) return 1
+      return 0
+    })
+  }
+
+  function applyReviewDelta(paths: string[], delta: WorkspaceReviewDelta): void {
+    const currentReview = review.value
+    if (currentReview === null) return
+
+    const requestedPaths = new Set(paths)
+    const stagedFiles = currentReview.stagedFiles.filter(
+      (file) => !requestedPaths.has(file.path) && (file.oldPath === undefined || !requestedPaths.has(file.oldPath)),
+    )
+    const unstagedFiles = currentReview.unstagedFiles.filter(
+      (file) => !requestedPaths.has(file.path) && (file.oldPath === undefined || !requestedPaths.has(file.oldPath)),
+    )
+    const nextStagedFiles = stagedFiles.concat(sortReviewFiles(delta.stagedFiles))
+    const nextUnstagedFiles = unstagedFiles.concat(sortReviewFiles(delta.unstagedFiles))
+    const nextReview: WorkspaceReview = {
+      ...currentReview,
+      stagedFiles: nextStagedFiles,
+      unstagedFiles: nextUnstagedFiles,
+      clean: currentReview.truncated ? false : nextStagedFiles.length === 0 && nextUnstagedFiles.length === 0,
+    }
+
+    review.value = nextReview
+
+    const visibleFileKeys = new Set([
+      ...nextStagedFiles.map((file) => fileKey('staged', file)),
+      ...nextUnstagedFiles.map((file) => fileKey('unstaged', file)),
+    ])
+    const nextExpandedFiles = new Set([...expandedFiles.value].filter((key) => visibleFileKeys.has(key)))
+    if (nextExpandedFiles.size !== expandedFiles.value.size) {
+      expandedFiles.value = nextExpandedFiles
+    }
+  }
+
   function isSectionExpanded(section: ReviewSection): boolean {
     return expandedSections.value[section]
   }
@@ -289,24 +330,26 @@ export function useWorkspaceReviewPanel(
     const key = fileActionKey(section, file)
     if (root === null || activeActionKey.value !== null || commitLoading.value || pullLoading.value) return
     const token = ++actionToken
+    const paths = [...new Set([file.path, ...(file.oldPath === undefined ? [] : [file.oldPath])])]
     activeActionKey.value = key
     operationNotice.value = ''
     actionError.value = ''
-    const update = section === 'staged' ? unstageWorkspaceFile : stageWorkspaceFile
+    const update = section === 'staged' ? unstageWorkspaceFiles : stageWorkspaceFiles
 
     try {
-      await update(root, file.path)
+      const delta = await update(root, paths)
+      if (token !== actionToken || workspacePathValue.value !== root) return
+      applyReviewDelta(paths, delta)
     } catch (reason: unknown) {
-      if (token === actionToken && workspacePathValue.value === root) actionError.value = errorText(reason)
-      activeActionKey.value = null
+      if (token === actionToken && workspacePathValue.value === root) {
+        actionError.value = errorText(reason)
+        activeActionKey.value = null
+      }
       return
     }
 
     if (token !== actionToken || workspacePathValue.value !== root) return
-    await refreshReview(false)
-    if (token !== actionToken || workspacePathValue.value !== root) return
     activeActionKey.value = null
-    options.onRefreshWorkspace()
   }
 
   async function runSectionAction(section: ReviewSection): Promise<void> {
@@ -316,26 +359,26 @@ export function useWorkspaceReviewPanel(
     if (root === null || files.length === 0 || activeActionKey.value !== null || commitLoading.value || pullLoading.value) return
 
     const token = ++actionToken
-    const update = section === 'staged' ? unstageWorkspaceFile : stageWorkspaceFile
+    const paths = [...new Set(files.flatMap((file) => [file.path, ...(file.oldPath === undefined ? [] : [file.oldPath])]))]
+    const update = section === 'staged' ? unstageWorkspaceFiles : stageWorkspaceFiles
     activeActionKey.value = key
     operationNotice.value = ''
     actionError.value = ''
 
-    for (const file of files) {
+    try {
+      const delta = await update(root, paths)
       if (token !== actionToken || workspacePathValue.value !== root) return
-      try {
-        await update(root, file.path)
-      } catch (reason: unknown) {
-        if (token === actionToken && workspacePathValue.value === root) actionError.value = errorText(reason)
-        break
+      applyReviewDelta(paths, delta)
+    } catch (reason: unknown) {
+      if (token === actionToken && workspacePathValue.value === root) {
+        actionError.value = errorText(reason)
+        activeActionKey.value = null
       }
+      return
     }
 
     if (token !== actionToken || workspacePathValue.value !== root) return
-    await refreshReview(false)
-    if (token !== actionToken || workspacePathValue.value !== root) return
     activeActionKey.value = null
-    options.onRefreshWorkspace()
   }
 
   function operationErrorText(reason: unknown): string {

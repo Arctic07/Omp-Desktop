@@ -1,5 +1,5 @@
 use crate::errors::IpcError;
-use crate::models::WorkspaceReview;
+use crate::models::{WorkspaceReview, WorkspaceReviewDelta};
 use crate::services::git;
 
 fn git_error(message: String) -> IpcError {
@@ -15,16 +15,22 @@ pub(crate) async fn get_workspace_review(root: String) -> Result<WorkspaceReview
 }
 
 #[tauri::command]
-pub(crate) async fn stage_workspace_file(root: String, path: String) -> Result<(), IpcError> {
-    tauri::async_runtime::spawn_blocking(move || git::stage_workspace_file(root, path))
+pub(crate) async fn stage_workspace_files(
+    root: String,
+    paths: Vec<String>,
+) -> Result<WorkspaceReviewDelta, IpcError> {
+    tauri::async_runtime::spawn_blocking(move || git::stage_workspace_files(root, paths))
         .await
         .map_err(|_| IpcError::new("GIT_TASK_FAILED", "Git stage task failed."))?
         .map_err(git_error)
 }
 
 #[tauri::command]
-pub(crate) async fn unstage_workspace_file(root: String, path: String) -> Result<(), IpcError> {
-    tauri::async_runtime::spawn_blocking(move || git::unstage_workspace_file(root, path))
+pub(crate) async fn unstage_workspace_files(
+    root: String,
+    paths: Vec<String>,
+) -> Result<WorkspaceReviewDelta, IpcError> {
+    tauri::async_runtime::spawn_blocking(move || git::unstage_workspace_files(root, paths))
         .await
         .map_err(|_| IpcError::new("GIT_TASK_FAILED", "Git unstage task failed."))?
         .map_err(git_error)

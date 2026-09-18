@@ -1,4 +1,5 @@
 use std::{
+    ffi::OsStr,
     io::Read,
     path::Path,
     process::{Child, Command, ExitStatus, Output, Stdio},
@@ -6,7 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::models::{ReviewFile, ReviewHunk, ReviewLine, WorkspaceReview};
+use crate::models::{ReviewFile, ReviewHunk, ReviewLine, WorkspaceReview, WorkspaceReviewDelta};
 use crate::services::workspace::{canonical_workspace_root, safe_git_path};
 
 const GIT_COMMAND_OUTPUT_LIMIT: usize = 8 * 1024 * 1024;
@@ -14,6 +15,8 @@ const GIT_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const COMMIT_MESSAGE_LIMIT: usize = 64 * 1024;
 const PATCH_LIMIT: usize = 200 * 1024;
 const REVIEW_FILE_LIMIT: usize = 100;
+
+const WORKSPACE_PATH_LIMIT: usize = REVIEW_FILE_LIMIT * 2;
 
 #[derive(Clone, Copy)]
 enum ReviewStatus {
@@ -25,6 +28,16 @@ enum ReviewStatus {
 }
 
 impl ReviewStatus {
+    fn from_git_code(code: u8) -> Self {
+        match code {
+            b'A' => Self::Added,
+            b'D' => Self::Deleted,
+            b'R' | b'C' => Self::Renamed,
+            b'M' | b'T' | b'U' => Self::Modified,
+            _ => Self::Modified,
+        }
+    }
+
     fn as_str(self) -> &'static str {
         match self {
             Self::Added => "added",
@@ -62,6 +75,13 @@ struct ParsedPatch {
     deletions: usize,
     hunks: Vec<ReviewHunk>,
 }
+
+struct BatchPatch {
+    header: Vec<u8>,
+    parsed: ParsedPatch,
+    too_large: bool,
+}
+type BatchStat = (String, Option<String>, usize, usize, bool);
 
 fn wait_for_git(mut child: Child, timeout_message: &'static str) -> Result<ExitStatus, String> {
     let deadline = Instant::now() + GIT_COMMAND_TIMEOUT;
@@ -132,9 +152,12 @@ fn collect_git_output(
     })
 }
 
-fn run_git(root: &Path, args: &[&str]) -> Result<Output, String> {
-    let child = Command::new("git")
-        .args(args)
+fn run_git<T: AsRef<OsStr>>(root: &Path, args: &[T]) -> Result<Output, String> {
+    let mut command = Command::new("git");
+    for arg in args {
+        command.arg(arg.as_ref());
+    }
+    let child = command
         .current_dir(root)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -152,120 +175,139 @@ fn run_git(root: &Path, args: &[&str]) -> Result<Output, String> {
     })
 }
 
-fn parse_tracked_changes(data: &[u8], source: PatchSource) -> Vec<ChangedPath> {
+fn parse_status_changes(data: &[u8]) -> (Vec<ChangedPath>, Vec<ChangedPath>) {
     let mut fields = data.split(|byte| *byte == 0);
-    let mut changes = Vec::new();
+    let mut staged_changes = Vec::new();
+    let mut unstaged_changes = Vec::new();
 
-    while let Some(status_bytes) = fields.next() {
-        if status_bytes.is_empty() {
+    while let Some(record) = fields.next() {
+        if record.len() < 4 || record[2] != b' ' {
             continue;
         }
-        let Some(first_path_bytes) = fields.next() else {
-            break;
-        };
-        let Ok(status) = std::str::from_utf8(status_bytes) else {
+
+        let index_status = record[0];
+        let worktree_status = record[1];
+        let Some(path) = std::str::from_utf8(&record[3..]).ok() else {
             continue;
         };
-        let status_code = status.as_bytes().first().copied().unwrap_or(b'M');
-        if status_code == b'R' || status_code == b'C' {
-            let Some(new_path_bytes) = fields.next() else {
-                break;
-            };
-            let (Ok(old_path), Ok(path)) = (
-                std::str::from_utf8(first_path_bytes),
-                std::str::from_utf8(new_path_bytes),
-            ) else {
+        if path.is_empty() {
+            continue;
+        }
+
+        let has_index_rename = matches!(index_status, b'R' | b'C');
+        let has_worktree_rename = matches!(worktree_status, b'R' | b'C');
+        let old_path = if has_index_rename || has_worktree_rename {
+            let Some(old_path_bytes) = fields.next() else {
                 continue;
             };
-            changes.push(ChangedPath {
+            let Ok(old_path) = std::str::from_utf8(old_path_bytes) else {
+                continue;
+            };
+            if old_path.is_empty() {
+                continue;
+            }
+            Some(old_path.to_owned())
+        } else {
+            None
+        };
+
+        if index_status != b' ' && index_status != b'?' && index_status != b'!' {
+            staged_changes.push(ChangedPath {
                 path: path.to_owned(),
-                old_path: Some(old_path.to_owned()),
-                status: ReviewStatus::Renamed,
-                source,
+                old_path: if has_index_rename {
+                    old_path.clone()
+                } else {
+                    None
+                },
+                status: ReviewStatus::from_git_code(index_status),
+                source: PatchSource::Cached,
             });
-            continue;
         }
 
-        let Ok(path) = std::str::from_utf8(first_path_bytes) else {
-            continue;
-        };
-        let review_status = match status_code {
-            b'A' => ReviewStatus::Added,
-            b'D' => ReviewStatus::Deleted,
-            b'M' | b'T' | b'U' => ReviewStatus::Modified,
-            _ => ReviewStatus::Modified,
-        };
-        changes.push(ChangedPath {
-            path: path.to_owned(),
-            old_path: None,
-            status: review_status,
-            source,
-        });
+        if worktree_status != b' ' && worktree_status != b'?' && worktree_status != b'!' {
+            unstaged_changes.push(ChangedPath {
+                path: path.to_owned(),
+                old_path: if has_worktree_rename { old_path } else { None },
+                status: ReviewStatus::from_git_code(worktree_status),
+                source: PatchSource::Worktree,
+            });
+        } else if index_status == b'?' && worktree_status == b'?' {
+            unstaged_changes.push(ChangedPath {
+                path: path.to_owned(),
+                old_path: None,
+                status: ReviewStatus::Untracked,
+                source: PatchSource::NoIndex,
+            });
+        }
     }
 
-    changes
+    (staged_changes, unstaged_changes)
 }
 
-fn parse_untracked_paths(data: &[u8]) -> Vec<String> {
-    data.split(|byte| *byte == 0)
-        .filter(|path| !path.is_empty())
-        .filter_map(|path| std::str::from_utf8(path).ok().map(str::to_owned))
-        .collect()
+fn run_git_patch(root: &Path, path: &str) -> Result<LimitedOutput, String> {
+    let mut command = Command::new("git");
+    command.args([
+        "diff",
+        "--no-index",
+        "--binary",
+        "--no-color",
+        "--no-ext-diff",
+        "--unified=3",
+        "--",
+    ]);
+    #[cfg(target_os = "windows")]
+    command.arg("NUL");
+    #[cfg(not(target_os = "windows"))]
+    command.arg("/dev/null");
+    command.arg(path);
+
+    let child = command
+        .current_dir(root)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| "Unable to read git changes".to_owned())?;
+    collect_git_output(child, PATCH_LIMIT, "Unable to read git changes")
 }
 
-fn run_git_patch(
+fn run_git_patch_batch(
     root: &Path,
-    paths: &[String],
     source: PatchSource,
+    paths: Option<&[String]>,
+    numstat: bool,
 ) -> Result<LimitedOutput, String> {
     let mut command = Command::new("git");
     match source {
         PatchSource::Cached => {
-            command.args([
-                "diff",
-                "--cached",
-                "--binary",
-                "--no-color",
-                "--no-ext-diff",
-                "--unified=3",
-                "--find-renames",
-                "--",
-            ]);
-            for path in paths {
-                command.arg(path);
-            }
+            command.args(["diff", "--cached"]);
         }
         PatchSource::Worktree => {
-            command.args([
-                "diff",
-                "--binary",
-                "--no-color",
-                "--no-ext-diff",
-                "--unified=3",
-                "--find-renames",
-                "--",
-            ]);
-            for path in paths {
-                command.arg(path);
-            }
+            command.args(["diff"]);
         }
-        PatchSource::NoIndex => {
-            command.args([
-                "diff",
-                "--no-index",
-                "--binary",
-                "--no-color",
-                "--no-ext-diff",
-                "--unified=3",
-                "--",
-            ]);
-            #[cfg(target_os = "windows")]
-            command.arg("NUL");
-            #[cfg(not(target_os = "windows"))]
-            command.arg("/dev/null");
-            if let Some(path) = paths.first() {
-                command.arg(path);
-            }
+        PatchSource::NoIndex => return Err("Unable to read git changes".to_owned()),
+    }
+    if numstat {
+        command.args([
+            "--numstat",
+            "-z",
+            "--no-color",
+            "--no-ext-diff",
+            "--find-renames",
+        ]);
+    } else {
+        command.args([
+            "--binary",
+            "--no-color",
+            "--no-ext-diff",
+            "--unified=3",
+            "--find-renames",
+        ]);
+    }
+    command.arg("--");
+    if let Some(paths) = paths {
+        for path in paths {
+            command.arg(path);
         }
     }
 
@@ -276,7 +318,11 @@ fn run_git_patch(
         .stderr(Stdio::null())
         .spawn()
         .map_err(|_| "Unable to read git changes".to_owned())?;
-    collect_git_output(child, PATCH_LIMIT, "Unable to read git changes")
+    collect_git_output(
+        child,
+        GIT_COMMAND_OUTPUT_LIMIT,
+        "Unable to read git changes",
+    )
 }
 
 fn parse_patch(data: &[u8]) -> ParsedPatch {
@@ -350,6 +396,192 @@ fn parse_patch(data: &[u8]) -> ParsedPatch {
     }
 }
 
+fn is_patch_header(line: &[u8]) -> bool {
+    line.starts_with(b"diff --git ")
+}
+
+fn parse_batch_patches(output: &LimitedOutput) -> Vec<BatchPatch> {
+    let mut starts = Vec::new();
+    let mut line_start = 0;
+    for (index, byte) in output.stdout.iter().enumerate() {
+        if *byte == b'\n' {
+            if is_patch_header(&output.stdout[line_start..index]) {
+                starts.push(line_start);
+            }
+            line_start = index + 1;
+        }
+    }
+    if line_start < output.stdout.len() && is_patch_header(&output.stdout[line_start..]) {
+        starts.push(line_start);
+    }
+
+    let mut patches = Vec::with_capacity(starts.len());
+    for (index, start) in starts.iter().copied().enumerate() {
+        let end = starts
+            .get(index + 1)
+            .copied()
+            .unwrap_or(output.stdout.len());
+        let bytes = &output.stdout[start..end];
+        let limited_len = bytes.len().min(PATCH_LIMIT);
+        let parsed = parse_patch(&bytes[..limited_len]);
+        let incomplete =
+            output.exceeded && end == output.stdout.len() && bytes.last().copied() != Some(b'\n');
+        let header_end = bytes
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .unwrap_or(bytes.len());
+        let header = bytes[..header_end].to_vec();
+        patches.push(BatchPatch {
+            header,
+            parsed,
+            too_large: bytes.len() > PATCH_LIMIT || incomplete,
+        });
+    }
+    patches
+}
+
+fn parse_batch_stats(output: &LimitedOutput) -> Vec<BatchStat> {
+    let mut records = output.stdout.split(|byte| *byte == 0);
+    let mut pending = None;
+    let mut stats = Vec::new();
+    let parse_count = |field: &[u8]| -> usize {
+        std::str::from_utf8(field)
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(0)
+    };
+    while let Some(record) = pending.take().or_else(|| records.next()) {
+        let mut columns = record.splitn(3, |byte| *byte == b'\t');
+        let (Some(additions), Some(deletions), Some(path)) =
+            (columns.next(), columns.next(), columns.next())
+        else {
+            continue;
+        };
+        let Ok(mut path) = String::from_utf8(path.to_vec()) else {
+            continue;
+        };
+        let binary = additions == b"-" || deletions == b"-";
+        let additions = if binary { 0 } else { parse_count(additions) };
+        let deletions = if binary { 0 } else { parse_count(deletions) };
+        if path.is_empty() {
+            let (Some(old_path), Some(new_path)) = (records.next(), records.next()) else {
+                continue;
+            };
+            let (Ok(old_path), Ok(path)) = (
+                String::from_utf8(old_path.to_vec()),
+                String::from_utf8(new_path.to_vec()),
+            ) else {
+                continue;
+            };
+            stats.push((path, Some(old_path), additions, deletions, binary));
+            continue;
+        }
+        let mut old_path = None;
+        if let Some(next) = records.next().filter(|next| !next.is_empty()) {
+            if next.contains(&b'\t') {
+                pending = Some(next);
+            } else {
+                old_path = Some(path);
+                let Ok(new_path) = String::from_utf8(next.to_vec()) else {
+                    continue;
+                };
+                path = new_path;
+            }
+        }
+        stats.push((path, old_path, additions, deletions, binary));
+    }
+    stats
+}
+
+fn take_batch_stat(stats: &mut [Option<BatchStat>], change: &ChangedPath) -> Option<BatchStat> {
+    let index = stats.iter().position(|stat| {
+        stat.as_ref().map_or(false, |(path, old_path, _, _, _)| {
+            path == &change.path
+                && old_path.as_deref().map_or(true, |old_path| {
+                    old_path == change.old_path.as_deref().unwrap_or(change.path.as_str())
+                })
+        })
+    })?;
+    stats[index].take()
+}
+
+fn quote_git_path(path: &str) -> String {
+    let mut quoted = String::with_capacity(path.len() + 2);
+    quoted.push('"');
+    for byte in path.bytes() {
+        match byte {
+            b'"' => quoted.push_str("\\\""),
+            b'\\' => quoted.push_str("\\\\"),
+            b'\x07' => quoted.push_str("\\a"),
+            b'\x08' => quoted.push_str("\\b"),
+            b'\t' => quoted.push_str("\\t"),
+            b'\n' => quoted.push_str("\\n"),
+            b'\x0b' => quoted.push_str("\\v"),
+            b'\x0c' => quoted.push_str("\\f"),
+            b'\r' => quoted.push_str("\\r"),
+            0x20..=0x7e => quoted.push(byte as char),
+            byte => {
+                const OCTAL: &[u8; 8] = b"01234567";
+                quoted.push('\\');
+                quoted.push(OCTAL[((byte >> 6) & 0x07) as usize] as char);
+                quoted.push(OCTAL[((byte >> 3) & 0x07) as usize] as char);
+                quoted.push(OCTAL[(byte & 0x07) as usize] as char);
+            }
+        }
+    }
+    quoted.push('"');
+    quoted
+}
+
+fn patch_matches_change(patch: &BatchPatch, change: &ChangedPath) -> bool {
+    let header = patch.header.strip_suffix(b"\r").unwrap_or(&patch.header);
+    let old_path = change.old_path.as_deref().unwrap_or(change.path.as_str());
+    let expected = format!("diff --git a/{old_path} b/{}", change.path);
+    if header == expected.as_bytes() {
+        return true;
+    }
+
+    let quoted = format!("diff --git \"a/{old_path}\" \"b/{}\"", change.path);
+    if header == quoted.as_bytes() {
+        return true;
+    }
+
+    let quoted_old = quote_git_path(&format!("a/{old_path}"));
+    let quoted_new = quote_git_path(&format!("b/{}", change.path));
+    let quoted_escaped = format!("diff --git {quoted_old} {quoted_new}");
+    header == quoted_escaped.as_bytes()
+}
+
+fn take_batch_patch(
+    patches: &mut [Option<BatchPatch>],
+    change: &ChangedPath,
+    missing_too_large: bool,
+) -> BatchPatch {
+    let selected = patches.iter().enumerate().find_map(|(index, patch)| {
+        patch
+            .as_ref()
+            .filter(|patch| patch_matches_change(patch, change))
+            .map(|_| index)
+    });
+
+    if let Some(index) = selected {
+        if let Some(patch) = patches[index].take() {
+            return patch;
+        }
+    }
+
+    BatchPatch {
+        header: Vec::new(),
+        parsed: ParsedPatch {
+            binary: false,
+            additions: 0,
+            deletions: 0,
+            hunks: Vec::new(),
+        },
+        too_large: missing_too_large,
+    }
+}
+
 fn sort_changed_paths(changes: &mut Vec<ChangedPath>) {
     changes.sort_by(|left, right| {
         left.path
@@ -369,56 +601,46 @@ fn retain_safe_changed_paths(root: &Path, changes: &mut Vec<ChangedPath>) {
     });
 }
 
+fn change_matches_paths(change: &ChangedPath, paths: &[String]) -> bool {
+    paths
+        .iter()
+        .any(|path| path == &change.path || change.old_path.as_deref() == Some(path.as_str()))
+}
+
+fn patch_paths_for_changes(changes: &[ChangedPath]) -> Vec<String> {
+    let mut paths = Vec::with_capacity(changes.len() * 2);
+    for change in changes {
+        if let Some(old_path) = change.old_path.as_ref() {
+            if !paths.iter().any(|path| path == old_path) {
+                paths.push(old_path.clone());
+            }
+        }
+        if !paths.iter().any(|path| path == &change.path) {
+            paths.push(change.path.clone());
+        }
+    }
+    paths
+}
+
 fn changed_paths_for_review(
     root: &Path,
+    status_data: &[u8],
+    requested_paths: Option<&[String]>,
 ) -> Result<(Vec<ChangedPath>, Vec<ChangedPath>, bool), String> {
-    let staged_args = [
-        "diff",
-        "--cached",
-        "--name-status",
-        "--find-renames",
-        "--no-ext-diff",
-        "-z",
-        "--",
-    ];
-    let staged = run_git(root, &staged_args)?;
-    if !staged.status.success() {
-        return Err("Unable to inspect staged changes".to_owned());
-    }
-    let mut staged_changes = parse_tracked_changes(&staged.stdout, PatchSource::Cached);
-
-    let unstaged_args = [
-        "diff",
-        "--name-status",
-        "--find-renames",
-        "--no-ext-diff",
-        "-z",
-        "--",
-    ];
-    let unstaged = run_git(root, &unstaged_args)?;
-    if !unstaged.status.success() {
-        return Err("Unable to inspect unstaged changes".to_owned());
-    }
-    let mut unstaged_changes = parse_tracked_changes(&unstaged.stdout, PatchSource::Worktree);
-
-    let untracked = run_git(root, &["ls-files", "--others", "--exclude-standard", "-z"])?;
-    if !untracked.status.success() {
-        return Err("Unable to inspect untracked files".to_owned());
-    }
-    for path in parse_untracked_paths(&untracked.stdout) {
-        unstaged_changes.push(ChangedPath {
-            path,
-            old_path: None,
-            status: ReviewStatus::Untracked,
-            source: PatchSource::NoIndex,
-        });
-    }
-
+    let (mut staged_changes, mut unstaged_changes) = parse_status_changes(status_data);
     retain_safe_changed_paths(root, &mut staged_changes);
     retain_safe_changed_paths(root, &mut unstaged_changes);
+
+    if let Some(requested_paths) = requested_paths {
+        staged_changes.retain(|change| change_matches_paths(change, requested_paths));
+        unstaged_changes.retain(|change| change_matches_paths(change, requested_paths));
+        sort_changed_paths(&mut staged_changes);
+        sort_changed_paths(&mut unstaged_changes);
+        return Ok((staged_changes, unstaged_changes, false));
+    }
+
     sort_changed_paths(&mut staged_changes);
     sort_changed_paths(&mut unstaged_changes);
-
     let truncated =
         staged_changes.len() > REVIEW_FILE_LIMIT || unstaged_changes.len() > REVIEW_FILE_LIMIT;
     staged_changes.truncate(REVIEW_FILE_LIMIT);
@@ -427,7 +649,31 @@ fn changed_paths_for_review(
     Ok((staged_changes, unstaged_changes, truncated))
 }
 
-fn update_git_index(root: &Path, args: &[&str], error: &'static str) -> Result<(), String> {
+fn read_workspace_changes(
+    root: &Path,
+    requested_paths: Option<&[String]>,
+) -> Result<(Vec<ChangedPath>, Vec<ChangedPath>, bool), String> {
+    let status = run_git(
+        root,
+        &[
+            "status",
+            "--porcelain=v1",
+            "--renames",
+            "-z",
+            "--untracked-files=all",
+        ],
+    )?;
+    if !status.status.success() {
+        return Err("Unable to inspect git status".to_owned());
+    }
+    changed_paths_for_review(root, &status.stdout, requested_paths)
+}
+
+fn update_git_index<T: AsRef<OsStr>>(
+    root: &Path,
+    args: &[T],
+    error: &'static str,
+) -> Result<(), String> {
     let output = run_git(root, args)?;
     if output.status.success() {
         Ok(())
@@ -436,29 +682,87 @@ fn update_git_index(root: &Path, args: &[&str], error: &'static str) -> Result<(
     }
 }
 
-pub(crate) fn stage_workspace_file(root: String, path: String) -> Result<(), String> {
-    let canonical_root = canonical_workspace_root(&root)?;
-    if !safe_git_path(&canonical_root, &path) {
-        return Err("Workspace path is invalid".to_owned());
+fn validate_workspace_paths(root: &Path, paths: Vec<String>) -> Result<Vec<String>, String> {
+    if paths.is_empty() {
+        return Err("Workspace paths cannot be empty".to_owned());
     }
-    let args = ["add", "--", path.as_str()];
-    update_git_index(&canonical_root, &args, "Unable to stage workspace file")
+
+    let mut safe_paths = Vec::with_capacity(paths.len().min(WORKSPACE_PATH_LIMIT));
+    for path in paths {
+        if path.is_empty() || path.contains('\0') || !safe_git_path(root, &path) {
+            return Err("Workspace path is invalid".to_owned());
+        }
+        if !safe_paths.iter().any(|existing| existing == &path) {
+            safe_paths.push(path);
+        }
+    }
+    if safe_paths.len() > WORKSPACE_PATH_LIMIT {
+        return Err("Too many workspace paths".to_owned());
+    }
+    if safe_paths.is_empty() {
+        return Err("Workspace paths cannot be empty".to_owned());
+    }
+    Ok(safe_paths)
 }
 
-pub(crate) fn unstage_workspace_file(root: String, path: String) -> Result<(), String> {
+pub(crate) fn update_workspace_files(
+    root: String,
+    paths: Vec<String>,
+    stage: bool,
+) -> Result<WorkspaceReviewDelta, String> {
     let canonical_root = canonical_workspace_root(&root)?;
-    if !safe_git_path(&canonical_root, &path) {
-        return Err("Workspace path is invalid".to_owned());
+    let paths = validate_workspace_paths(&canonical_root, paths)?;
+
+    if stage {
+        let mut args = vec!["add".to_owned(), "--".to_owned()];
+        args.extend(paths.iter().cloned());
+        update_git_index(&canonical_root, &args, "Unable to stage workspace file")?;
+    } else {
+        let head = run_git(&canonical_root, &["rev-parse", "--verify", "HEAD"])?;
+        let mut args = if head.status.success() {
+            vec!["restore".to_owned(), "--staged".to_owned(), "--".to_owned()]
+        } else {
+            vec![
+                "rm".to_owned(),
+                "--cached".to_owned(),
+                "--ignore-unmatch".to_owned(),
+                "--".to_owned(),
+            ]
+        };
+        args.extend(paths.iter().cloned());
+        update_git_index(&canonical_root, &args, "Unable to unstage workspace file")?;
     }
 
-    let head = run_git(&canonical_root, &["rev-parse", "--verify", "HEAD"])?;
-    if head.status.success() {
-        let args = ["restore", "--staged", "--", path.as_str()];
-        return update_git_index(&canonical_root, &args, "Unable to unstage workspace file");
-    }
+    let (staged_changes, unstaged_changes, _) =
+        read_workspace_changes(&canonical_root, Some(&paths))?;
+    let staged_patch_paths = patch_paths_for_changes(&staged_changes);
+    let unstaged_patch_paths = patch_paths_for_changes(&unstaged_changes);
+    let staged_files =
+        build_review_files(&canonical_root, staged_changes, Some(&staged_patch_paths))?;
+    let unstaged_files = build_review_files(
+        &canonical_root,
+        unstaged_changes,
+        Some(&unstaged_patch_paths),
+    )?;
 
-    let args = ["rm", "--cached", "--ignore-unmatch", "--", path.as_str()];
-    update_git_index(&canonical_root, &args, "Unable to unstage workspace file")
+    Ok(WorkspaceReviewDelta {
+        staged_files,
+        unstaged_files,
+    })
+}
+
+pub(crate) fn stage_workspace_files(
+    root: String,
+    paths: Vec<String>,
+) -> Result<WorkspaceReviewDelta, String> {
+    update_workspace_files(root, paths, true)
+}
+
+pub(crate) fn unstage_workspace_files(
+    root: String,
+    paths: Vec<String>,
+) -> Result<WorkspaceReviewDelta, String> {
+    update_workspace_files(root, paths, false)
 }
 
 pub(crate) fn commit_workspace(root: String, message: String) -> Result<(), String> {
@@ -507,32 +811,75 @@ pub(crate) fn pull_workspace(root: String) -> Result<(), String> {
     }
 }
 
-fn build_review_file(root: &Path, change: ChangedPath) -> Result<ReviewFile, String> {
-    let mut patch_paths = Vec::with_capacity(2);
-    if let Some(old_path) = change.old_path.as_ref() {
-        patch_paths.push(old_path.clone());
-    }
-    patch_paths.push(change.path.clone());
-    let patch = run_git_patch(root, &patch_paths, change.source)?;
-    let parsed = parse_patch(&patch.stdout);
-    let expected_no_index_status = matches!(change.source, PatchSource::NoIndex);
-    if !patch.status.success()
-        && !patch.exceeded
-        && !(expected_no_index_status && patch.status.code() == Some(1))
-    {
-        return Err("Unable to read git patch".to_owned());
-    }
-
-    Ok(ReviewFile {
+fn review_file_from_patch(change: ChangedPath, parsed: ParsedPatch, too_large: bool) -> ReviewFile {
+    ReviewFile {
         path: change.path,
         old_path: change.old_path,
         status: change.status.as_str().to_owned(),
         additions: parsed.additions,
         deletions: parsed.deletions,
         binary: parsed.binary,
-        too_large: patch.exceeded,
+        too_large,
         hunks: parsed.hunks,
-    })
+    }
+}
+
+fn build_review_files(
+    root: &Path,
+    changes: Vec<ChangedPath>,
+    patch_paths: Option<&[String]>,
+) -> Result<Vec<ReviewFile>, String> {
+    let Some(source) = changes.first().map(|change| change.source) else {
+        return Ok(Vec::new());
+    };
+
+    match source {
+        PatchSource::Cached | PatchSource::Worktree => {
+            let batch = run_git_patch_batch(root, source, patch_paths, false)?;
+            if !batch.status.success() && !batch.exceeded {
+                return Err("Unable to read git patch".to_owned());
+            }
+            let stat_batch = run_git_patch_batch(root, source, patch_paths, true)?;
+            if !stat_batch.status.success() && !stat_batch.exceeded {
+                return Err("Unable to read git numstat".to_owned());
+            }
+            let mut stats: Vec<Option<BatchStat>> = parse_batch_stats(&stat_batch)
+                .into_iter()
+                .map(Some)
+                .collect();
+            let mut patches: Vec<Option<BatchPatch>> =
+                parse_batch_patches(&batch).into_iter().map(Some).collect();
+            let mut files = Vec::with_capacity(changes.len());
+            for change in changes {
+                let patch = take_batch_patch(&mut patches, &change, batch.exceeded);
+                let stat = take_batch_stat(&mut stats, &change);
+                let mut file = review_file_from_patch(
+                    change,
+                    patch.parsed,
+                    patch.too_large || stat_batch.exceeded,
+                );
+                if let Some((_, _, additions, deletions, binary)) = stat {
+                    file.additions = additions;
+                    file.deletions = deletions;
+                    file.binary = binary;
+                }
+                files.push(file);
+            }
+            Ok(files)
+        }
+        PatchSource::NoIndex => {
+            let mut files = Vec::with_capacity(changes.len());
+            for change in changes {
+                let patch = run_git_patch(root, &change.path)?;
+                if !patch.status.success() && !patch.exceeded && patch.status.code() != Some(1) {
+                    return Err("Unable to read git patch".to_owned());
+                }
+                let parsed = parse_patch(&patch.stdout);
+                files.push(review_file_from_patch(change, parsed, patch.exceeded));
+            }
+            Ok(files)
+        }
+    }
 }
 
 pub(crate) fn get_workspace_review(root: String) -> Result<WorkspaceReview, String> {
@@ -567,7 +914,13 @@ pub(crate) fn get_workspace_review(root: String) -> Result<WorkspaceReview, Stri
 
     let status = run_git(
         &canonical_root,
-        &["status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        &[
+            "status",
+            "--porcelain=v1",
+            "--renames",
+            "-z",
+            "--untracked-files=all",
+        ],
     )
     .map_err(|_| "Unable to inspect git status".to_owned())?;
     if !status.status.success() {
@@ -583,7 +936,7 @@ pub(crate) fn get_workspace_review(root: String) -> Result<WorkspaceReview, Stri
     let dirty = !status.stdout.is_empty();
 
     let (staged_changes, unstaged_changes, truncated) =
-        match changed_paths_for_review(&canonical_root) {
+        match changed_paths_for_review(&canonical_root, &status.stdout, None) {
             Ok(changes) => changes,
             Err(error) => {
                 return Ok(WorkspaceReview {
@@ -597,39 +950,39 @@ pub(crate) fn get_workspace_review(root: String) -> Result<WorkspaceReview, Stri
             }
         };
 
-    let mut staged_files = Vec::with_capacity(staged_changes.len());
-    for change in staged_changes {
-        match build_review_file(&canonical_root, change) {
-            Ok(file) => staged_files.push(file),
+    let staged_patch_paths = patch_paths_for_changes(&staged_changes);
+    let unstaged_patch_paths = patch_paths_for_changes(&unstaged_changes);
+    let staged_files =
+        match build_review_files(&canonical_root, staged_changes, Some(&staged_patch_paths)) {
+            Ok(files) => files,
             Err(error) => {
                 return Ok(WorkspaceReview {
                     repo: true,
                     clean: !dirty,
-                    staged_files,
+                    staged_files: Vec::new(),
                     unstaged_files: Vec::new(),
                     truncated,
                     error: Some(error),
                 });
             }
+        };
+    let unstaged_files = match build_review_files(
+        &canonical_root,
+        unstaged_changes,
+        Some(&unstaged_patch_paths),
+    ) {
+        Ok(files) => files,
+        Err(error) => {
+            return Ok(WorkspaceReview {
+                repo: true,
+                clean: !dirty,
+                staged_files,
+                unstaged_files: Vec::new(),
+                truncated,
+                error: Some(error),
+            });
         }
-    }
-
-    let mut unstaged_files = Vec::with_capacity(unstaged_changes.len());
-    for change in unstaged_changes {
-        match build_review_file(&canonical_root, change) {
-            Ok(file) => unstaged_files.push(file),
-            Err(error) => {
-                return Ok(WorkspaceReview {
-                    repo: true,
-                    clean: !dirty,
-                    staged_files,
-                    unstaged_files,
-                    truncated,
-                    error: Some(error),
-                });
-            }
-        }
-    }
+    };
 
     Ok(WorkspaceReview {
         repo: true,

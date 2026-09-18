@@ -63,6 +63,14 @@ pub(crate) struct WorkspaceReview {
 }
 
 #[derive(Serialize)]
+pub(crate) struct WorkspaceReviewDelta {
+    #[serde(rename = "stagedFiles")]
+    pub(crate) staged_files: Vec<ReviewFile>,
+    #[serde(rename = "unstagedFiles")]
+    pub(crate) unstaged_files: Vec<ReviewFile>,
+}
+
+#[derive(Serialize)]
 pub(crate) struct WorkspaceSearchMatch {
     pub(crate) kind: String,
     pub(crate) path: String,
