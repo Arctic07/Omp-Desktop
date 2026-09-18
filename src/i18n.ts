@@ -344,6 +344,7 @@ export interface SourceCopy {
   fileEmpty: string
   fileLoading: string
   fileError: string
+  fileRevealError: string
   fileSearchPlaceholder: string
   fileSearchClear: string
   fileSearchLoading: string
@@ -406,6 +407,7 @@ export interface SourceCopy {
   localSessionTitle: string
   modelLabel: string
   thinkingLabel: string
+  contextUsage: string
   thinkingOptions: readonly SourceSettingChoice<SourceThinkingLevel>[]
   settingsTitle: string
   closeSettings: string

@@ -833,17 +833,24 @@ pub(crate) fn reveal_workspace_file(
 ) -> Result<RevealWorkspaceFileResult, String> {
     let (_canonical_root, target) = resolve_workspace_path(&root, &path)?;
     #[cfg(target_os = "windows")]
-    let status = {
+    let ok = {
         let mut select_argument = OsString::from("/select,");
         select_argument.push(target.as_os_str());
-        Command::new("explorer").arg(select_argument).status()
+        Command::new("explorer.exe")
+            .arg(select_argument)
+            .spawn()
+            .is_ok()
     };
 
     #[cfg(target_os = "macos")]
-    let status = Command::new("open").arg("-R").arg(&target).status();
+    let ok = Command::new("open")
+        .arg("-R")
+        .arg(&target)
+        .status()
+        .is_ok_and(|status| status.success());
 
     #[cfg(all(unix, not(target_os = "macos")))]
-    let status = {
+    let ok = {
         let reveal_target = if target.is_dir() {
             target.as_path()
         } else {
@@ -852,10 +859,11 @@ pub(crate) fn reveal_workspace_file(
                 None => target.as_path(),
             }
         };
-        Command::new("xdg-open").arg(reveal_target).status()
+        Command::new("xdg-open")
+            .arg(reveal_target)
+            .status()
+            .is_ok_and(|status| status.success())
     };
 
-    Ok(RevealWorkspaceFileResult {
-        ok: status.is_ok_and(|status| status.success()),
-    })
+    Ok(RevealWorkspaceFileResult { ok })
 }

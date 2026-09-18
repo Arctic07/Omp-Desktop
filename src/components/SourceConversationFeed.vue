@@ -77,7 +77,9 @@ const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((
 }))
 const totalSize = computed<number>(() => virtualizer.value.getTotalSize())
 const measureVirtualRow: VNodeRef = (node) => {
-  if (typeof HTMLElement !== 'undefined' && node instanceof HTMLElement) {
+  if (node === null) {
+    virtualizer.value.measureElement(null)
+  } else if (typeof HTMLElement !== 'undefined' && node instanceof HTMLElement) {
     virtualizer.value.measureElement(node)
   }
 }
@@ -103,7 +105,7 @@ const measureVirtualRow: VNodeRef = (node) => {
             '--omp-feed-row-height': `${virtualRow.size}px`,
           }"
         >
-          <div :ref="measureVirtualRow">
+          <div :ref="measureVirtualRow" :data-index="virtualRow.index">
             <SourceConversationEntry
               :entry="virtualRow.entry"
               :open="openToolIds.has(virtualRow.entry.id)"

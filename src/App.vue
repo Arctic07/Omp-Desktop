@@ -1,9 +1,18 @@
 <script setup lang="ts">
+import { computed, ref, watch, type CSSProperties } from 'vue'
 import { useAppShell } from './composables/useAppShell'
 import SourceConversation from './components/SourceConversation.vue'
 import SourceSettings from './components/SourceSettings.vue'
 import SourceSidebar from './components/SourceSidebar.vue'
 import SourceWorkPanel from './components/SourceWorkPanel.vue'
+
+const RIGHT_PANEL_WIDTH_MIN = 294
+const RIGHT_PANEL_WIDTH_MAX = 640
+const RIGHT_PANEL_WIDTH_DEFAULT = 448
+
+type AppFrameStyle = CSSProperties & {
+  '--omp-work-panel-width': string
+}
 
 const {
   sidebarCollapsed,
@@ -33,10 +42,44 @@ const {
   handleMessageSubmit,
   selectWorkspace,
 } = useAppShell()
-</script>
 
+const rightPanelWidth = ref(RIGHT_PANEL_WIDTH_DEFAULT)
+const rightPanelResizing = ref(false)
+const frameStyle = computed<AppFrameStyle>(() => ({
+  '--omp-work-panel-width': `${rightPanelWidth.value}px`,
+}))
+
+function clampRightPanelWidth(width: number): number {
+  if (!Number.isFinite(width)) return RIGHT_PANEL_WIDTH_DEFAULT
+  return Math.min(RIGHT_PANEL_WIDTH_MAX, Math.max(RIGHT_PANEL_WIDTH_MIN, Math.round(width)))
+}
+
+function handleRightPanelResize(width: number): void {
+  rightPanelWidth.value = clampRightPanelWidth(width)
+}
+
+function handleRightPanelResizeStart(): void {
+  rightPanelResizing.value = true
+}
+
+function handleRightPanelResizeEnd(): void {
+  rightPanelResizing.value = false
+}
+
+watch(rightPanelOpen, (isOpen) => {
+  if (!isOpen) rightPanelResizing.value = false
+})
+</script>
 <template>
-  <div class="omp-frame" :class="{ 'omp-frame-sidebar-collapsed': sidebarCollapsed, 'omp-frame-right-panel-open': rightPanelOpen }">
+  <div
+    class="omp-frame"
+    :class="{
+      'omp-frame-sidebar-collapsed': sidebarCollapsed,
+      'omp-frame-right-panel-open': rightPanelOpen,
+      'omp-frame-right-panel-resizing': rightPanelResizing,
+    }"
+    :style="frameStyle"
+  >
     <div class="omp-sidebar-column">
       <SourceSidebar
         :collapsed="sidebarCollapsed"
@@ -66,6 +109,7 @@ const {
     </main>
     <SourceWorkPanel
       v-if="rightPanelOpen"
+      :width="rightPanelWidth"
       :workspace-path="workspacePath"
       :active-tab="rightPanelTab"
       :requested-file="requestedFile"
@@ -77,6 +121,9 @@ const {
       @open-diff="openRequestedDiff"
       @close-diff="closeRequestedDiff"
       @refresh-workspace="refreshWorkspacePanels"
+      @resize="handleRightPanelResize"
+      @resize-start="handleRightPanelResizeStart"
+      @resize-end="handleRightPanelResizeEnd"
     />
     <SourceSettings v-if="settingsOpen" @close="settingsOpen = false" />
   </div>

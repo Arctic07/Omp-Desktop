@@ -1,6 +1,7 @@
 .omp-frame {
-  --omp-work-panel-min-width: 420px;
+  --omp-work-panel-min-width: 294px;
   --omp-work-panel-max-width: 640px;
+  --omp-work-panel-width: 448px;
   --omp-work-panel-overlay-max-width: 360px;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
@@ -11,15 +12,19 @@
   transition: grid-template-columns 200ms var(--ds-ease-in-out);
 }
 
+.omp-frame-right-panel-resizing {
+  transition: none;
+}
+
 .omp-frame-sidebar-collapsed {
   grid-template-columns: 56px minmax(0, 1fr);
 }
 .omp-frame-right-panel-open {
-  grid-template-columns: 280px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), var(--omp-work-panel-max-width));
+  grid-template-columns: 280px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), min(var(--omp-work-panel-width), var(--omp-work-panel-max-width)));
 }
 
 .omp-frame-sidebar-collapsed.omp-frame-right-panel-open {
-  grid-template-columns: 56px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), var(--omp-work-panel-max-width));
+  grid-template-columns: 56px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), min(var(--omp-work-panel-width), var(--omp-work-panel-max-width)));
 }
 
 .omp-sidebar-column {
@@ -32,7 +37,7 @@
   .omp-frame-right-panel-open,
   .omp-frame-sidebar-collapsed.omp-frame-right-panel-open {
     --omp-work-panel-max-width: max(var(--omp-work-panel-min-width), 36vw);
-    grid-template-columns: 56px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), var(--omp-work-panel-max-width));
+    grid-template-columns: 56px minmax(0, 1fr) minmax(var(--omp-work-panel-min-width), min(var(--omp-work-panel-width), var(--omp-work-panel-max-width)));
   }
 }
 
@@ -49,7 +54,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: min(calc(100% - 56px), var(--omp-work-panel-overlay-max-width));
+    width: min(calc(100% - 56px), var(--omp-work-panel-width), var(--omp-work-panel-overlay-max-width));
   }
 }
 

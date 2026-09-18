@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, type VNodeRef, watch } from 'vue'
+
+import { useVirtualizer } from '@tanstack/vue-virtual'
 
 import { useAppSettings } from '../stores/appSettings'
 import type { ReviewDiffTarget, ReviewFile, ReviewHunk, ReviewLine } from '../utils/desktopApi'
@@ -26,6 +28,23 @@ interface DiffHunkView {
   newStart: number | null
 }
 
+interface DiffHunkRenderRow {
+  key: string
+  kind: 'hunk'
+  hunk: DiffHunkView
+  lastInHunk: boolean
+}
+
+interface DiffLineRenderRow {
+  key: string
+  kind: 'line'
+  hunk: DiffHunkView
+  row: DiffRow
+  lastInHunk: boolean
+}
+
+type DiffRenderRow = DiffHunkRenderRow | DiffLineRenderRow
+
 const props = defineProps<SourceDiffPanelProps>()
 const emit = defineEmits<{
   close: []
@@ -34,22 +53,7 @@ const emit = defineEmits<{
 const { copy } = useAppSettings()
 const file = computed<ReviewFile>(() => props.target.file)
 
-const diffLoading = ref(false)
-const diffError = ref('')
-let renderSequence = 0
-
-function queueDiffRender(): void {
-  const sequence = ++renderSequence
-  diffLoading.value = true
-  diffError.value = ''
-  void nextTick(() => {
-    if (sequence !== renderSequence) return
-    if (!Array.isArray(file.value.hunks)) diffError.value = copy.value.reviewDiffError
-    diffLoading.value = false
-  })
-}
-
-watch(() => props.target, queueDiffRender, { immediate: true })
+const diffError = computed(() => (Array.isArray(file.value.hunks) ? '' : copy.value.reviewDiffError))
 
 const fileName = computed(() => {
   const path = file.value.path.replaceAll('\\', '/')
@@ -67,7 +71,6 @@ const statusLabel = computed(() => {
   return labels[file.value.status]
 })
 const isUnavailable = computed(() => file.value.binary || file.value.tooLarge)
-const hasRows = computed(() => diffHunks.value.some((hunk) => hunk.rows.length > 0))
 
 function parseHunkStart(header: string): { oldStart: number; newStart: number } | null {
   const match = header.match(/@@\s+-(\d+)(?:,\d+)?\s+\+(\d+)(?:,\d+)?\s+@@/)
@@ -139,6 +142,30 @@ function hunkView(hunk: ReviewHunk): DiffHunkView {
 }
 
 const diffHunks = computed<DiffHunkView[]>(() => (Array.isArray(file.value.hunks) ? file.value.hunks.map(hunkView) : []))
+const hasRows = computed(() => diffHunks.value.some((hunk) => hunk.rows.length > 0))
+const diffTargetKey = computed(() => `${props.target.section}:${file.value.path}`)
+const renderRows = computed<DiffRenderRow[]>(() => {
+  const rows: DiffRenderRow[] = []
+  diffHunks.value.forEach((hunk, hunkIndex) => {
+    const hunkKey = `${diffTargetKey.value}:${hunkIndex}`
+    rows.push({
+      key: `${hunkKey}:hunk`,
+      kind: 'hunk',
+      hunk,
+      lastInHunk: hunk.rows.length === 0,
+    })
+    hunk.rows.forEach((row, rowIndex) => {
+      rows.push({
+        key: `${hunkKey}:line:${rowIndex}`,
+        kind: 'line',
+        hunk,
+        row,
+        lastInHunk: rowIndex === hunk.rows.length - 1,
+      })
+    })
+  })
+  return rows
+})
 
 function lineClass(type: ReviewLine['type'] | null): string {
   return type === null ? 'omp-source-diff-line-empty' : `omp-source-diff-line-${type}`
@@ -161,6 +188,60 @@ function close(): void {
 function openFile(): void {
   emit('open-file', file.value.path)
 }
+
+const diffScroll = ref<HTMLElement | null>(null)
+
+function estimateDiffRowSize(index: number): number {
+  const renderRow = renderRows.value[index]
+  if (renderRow === undefined || renderRow.kind === 'hunk') {
+    return 28
+  }
+
+  const textLength = Math.max(renderRow.row.oldText?.length ?? 0, renderRow.row.newText?.length ?? 0)
+  return Math.max(1, Math.ceil(textLength / 48)) * 22
+}
+
+function getDiffRowKey(index: number): string {
+  return renderRows.value[index]?.key ?? String(index)
+}
+
+const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(computed(() => ({
+  count: renderRows.value.length,
+  getScrollElement: () => diffScroll.value,
+  getItemKey: getDiffRowKey,
+  estimateSize: estimateDiffRowSize,
+  initialRect: { width: 1024, height: 720 },
+  overscan: 8,
+  useAnimationFrameWithResizeObserver: true,
+  scrollEndThreshold: 96,
+})))
+
+const virtualRows = computed(() => virtualizer.value.getVirtualItems().flatMap((virtualRow) => {
+  const row = renderRows.value[virtualRow.index]
+  return row === undefined ? [] : [{ ...virtualRow, row }]
+}))
+const totalSize = computed<number>(() => virtualizer.value.getTotalSize())
+const measureVirtualRow: VNodeRef = (node) => {
+  if (typeof HTMLElement !== 'undefined' && node instanceof HTMLElement) {
+    virtualizer.value.measureElement(node)
+  }
+}
+
+let renderSequence = 0
+function resetDiffScroll(): void {
+  const sequence = ++renderSequence
+  diffScroll.value?.scrollTo({ top: 0, left: 0 })
+  void nextTick(() => {
+    if (sequence !== renderSequence) return
+    const scrollElement = diffScroll.value
+    if (scrollElement === null) return
+    virtualizer.value.measure()
+    scrollElement.scrollTo({ top: 0, left: 0 })
+    virtualizer.value.scrollToOffset(0)
+  })
+}
+
+watch(() => props.target, resetDiffScroll, { immediate: true })
 </script>
 
 <template>
@@ -200,10 +281,6 @@ function openFile(): void {
       <AppIcon name="folder-open" :size="22" aria-hidden="true" />
       <strong>{{ copy.fileNoWorkspace }}</strong>
     </div>
-    <div v-else-if="diffLoading" class="omp-source-diff-state" role="status" aria-live="polite" :aria-label="copy.reviewDiffLoading">
-      <AppIcon name="refresh-cw" class="omp-source-diff-spin" :size="19" aria-hidden="true" />
-      <strong>{{ copy.reviewDiffLoading }}</strong>
-    </div>
     <div v-else-if="diffError" class="omp-source-diff-state omp-source-diff-state-error" role="alert" :aria-label="diffError">
       <AppIcon name="circle-alert" :size="22" aria-hidden="true" />
       <strong>{{ diffError }}</strong>
@@ -220,30 +297,47 @@ function openFile(): void {
       <AppIcon name="file-diff" :size="22" aria-hidden="true" />
       <strong>{{ copy.reviewDiffEmpty }}</strong>
     </div>
-    <div v-else class="omp-source-diff-scroll" role="region" :aria-label="`${copy.reviewDiffOld} / ${copy.reviewDiffNew}`">
+    <div v-else ref="diffScroll" class="omp-source-diff-scroll" role="region" :aria-label="`${copy.reviewDiffOld} / ${copy.reviewDiffNew}`">
       <div class="omp-source-diff-column-headings" aria-hidden="true">
         <span>{{ copy.reviewDiffOld }}</span>
         <span>{{ copy.reviewDiffNew }}</span>
       </div>
-      <section v-for="(hunk, hunkIndex) in diffHunks" :key="`${hunk.hunk.header}:${hunkIndex}`" class="omp-source-diff-hunk">
-        <h2 class="omp-source-diff-hunk-header">{{ hunk.hunk.header }}</h2>
-        <div class="omp-source-diff-columns">
-          <div class="omp-source-diff-column" role="region" :aria-label="`${copy.reviewDiffOld}: ${hunk.hunk.header}`">
-            <div v-for="(row, rowIndex) in hunk.rows" :key="`old:${rowIndex}`" class="omp-source-diff-line" :class="lineClass(row.oldType)">
-              <span class="omp-source-diff-number">{{ row.oldNumber ?? '' }}</span>
-              <span class="omp-source-diff-marker" aria-hidden="true">{{ lineMarker(row.oldType) }}</span>
-              <code>{{ row.oldText ?? '' }}</code>
-            </div>
-          </div>
-          <div class="omp-source-diff-column" role="region" :aria-label="`${copy.reviewDiffNew}: ${hunk.hunk.header}`">
-            <div v-for="(row, rowIndex) in hunk.rows" :key="`new:${rowIndex}`" class="omp-source-diff-line" :class="lineClass(row.newType)">
-              <span class="omp-source-diff-number">{{ row.newNumber ?? '' }}</span>
-              <span class="omp-source-diff-marker" aria-hidden="true">{{ lineMarker(row.newType) }}</span>
-              <code>{{ row.newText ?? '' }}</code>
+      <div class="omp-source-diff-virtual-spacer" :style="{ '--omp-source-diff-total-size': `${totalSize}px` }">
+        <div
+          v-for="virtualRow in virtualRows"
+          :key="String(virtualRow.key)"
+          class="omp-source-diff-virtual-row"
+          :data-row-kind="virtualRow.row.kind"
+          :style="{
+            '--omp-source-diff-row-offset': `${virtualRow.start}px`,
+            '--omp-source-diff-row-height': `${virtualRow.size}px`,
+          }"
+        >
+          <div
+            :ref="measureVirtualRow"
+            class="omp-source-diff-virtual-row-content"
+            :class="{ 'omp-source-diff-virtual-row-end': virtualRow.row.lastInHunk }"
+          >
+            <h2 v-if="virtualRow.row.kind === 'hunk'" class="omp-source-diff-hunk-header">{{ virtualRow.row.hunk.hunk.header }}</h2>
+            <div v-else class="omp-source-diff-columns">
+              <div class="omp-source-diff-column" role="region" :aria-label="`${copy.reviewDiffOld}: ${virtualRow.row.hunk.hunk.header}`">
+                <div class="omp-source-diff-line" :class="lineClass(virtualRow.row.row.oldType)">
+                  <span class="omp-source-diff-number">{{ virtualRow.row.row.oldNumber ?? '' }}</span>
+                  <span class="omp-source-diff-marker" aria-hidden="true">{{ lineMarker(virtualRow.row.row.oldType) }}</span>
+                  <code>{{ virtualRow.row.row.oldText ?? '' }}</code>
+                </div>
+              </div>
+              <div class="omp-source-diff-column" role="region" :aria-label="`${copy.reviewDiffNew}: ${virtualRow.row.hunk.hunk.header}`">
+                <div class="omp-source-diff-line" :class="lineClass(virtualRow.row.row.newType)">
+                  <span class="omp-source-diff-number">{{ virtualRow.row.row.newNumber ?? '' }}</span>
+                  <span class="omp-source-diff-marker" aria-hidden="true">{{ lineMarker(virtualRow.row.row.newType) }}</span>
+                  <code>{{ virtualRow.row.row.newText ?? '' }}</code>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   </section>
 </template>
@@ -415,7 +509,8 @@ function openFile(): void {
   min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-color: var(--omp-scrollbar-thumb) transparent;
   scrollbar-width: thin;
 }
@@ -425,8 +520,8 @@ function openFile(): void {
   z-index: 1;
   top: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-width: 640px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-width: 0;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-bg-layer-2);
   color: var(--dsw-alias-label-secondary);
@@ -436,6 +531,7 @@ function openFile(): void {
 }
 
 .omp-source-diff-column-headings span {
+  min-width: 0;
   padding: 0 10px;
 }
 
@@ -443,23 +539,47 @@ function openFile(): void {
   border-left: 1px solid var(--dsw-alias-border-l2);
 }
 
-.omp-source-diff-hunk {
-  min-width: 640px;
+.omp-source-diff-virtual-spacer {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: var(--omp-source-diff-total-size);
+}
+
+.omp-source-diff-virtual-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-width: 0;
+  height: var(--omp-source-diff-row-height);
+  transform: translateY(var(--omp-source-diff-row-offset));
+}
+
+.omp-source-diff-virtual-row-content {
+  min-width: 0;
+}
+
+.omp-source-diff-virtual-row-end {
   border-bottom: 1px solid var(--dsw-alias-border-l2);
 }
 
 .omp-source-diff-hunk-header {
+  min-width: 0;
   margin: 0;
   padding: 6px 10px;
   background: var(--dsw-alias-markdown-code-block-banner);
   color: var(--dsw-alias-label-secondary);
   font: 10px/15px var(--ds-font-family-code);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .omp-source-diff-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-width: 0;
   min-height: 0;
 }
 
@@ -474,7 +594,7 @@ function openFile(): void {
 .omp-source-diff-line {
   display: grid;
   grid-template-columns: 42px 18px minmax(0, 1fr);
-  min-width: max-content;
+  min-width: 0;
   min-height: 22px;
   padding-right: 8px;
   font: var(--dsw-font-markdown-code-block);
@@ -484,7 +604,9 @@ function openFile(): void {
 .omp-source-diff-line code {
   min-width: 0;
   color: var(--dsw-alias-label-primary);
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .omp-source-diff-number {
@@ -536,16 +658,6 @@ function openFile(): void {
 }
 .omp-source-diff-state-error strong {
   color: var(--dsw-static-red-600);
-}
-
-.omp-source-diff-spin {
-  animation: omp-source-diff-spin 700ms linear infinite;
-}
-
-@keyframes omp-source-diff-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .omp-source-diff-state strong {

@@ -63,6 +63,14 @@ const { copy } = useAppSettings()
           @request-workspace="emit('request-workspace')"
           @submit="emit('submit', $event)"
         />
+        <div
+          v-if="props.sessionId !== null"
+          class="omp-composer-stats"
+          :aria-label="copy.conversationStats"
+        >
+          <span>3 轮 4 步 · 57 tok/s</span>
+          <span>28.1K tok · 缓存命中 65%</span>
+        </div>
       </div>
     </div>
   </div>

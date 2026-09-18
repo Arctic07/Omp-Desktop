@@ -228,7 +228,7 @@
   min-height: 36px;
 }
 
-.omp-composer-seat-session .omp-composer-placeholder {
+.omp-composer-seat-session .omp-composer-input::before {
   display: block;
   white-space: nowrap;
 }
@@ -242,7 +242,8 @@
   user-select: none;
 }
 
-.omp-composer-placeholder {
+.omp-composer-input::before {
+  content: attr(data-placeholder);
   position: absolute;
   inset: 4px 8px auto 14px;
   overflow: hidden;
@@ -254,6 +255,10 @@
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.omp-composer-input[data-placeholder='']::before {
+  content: none;
 }
 
 .omp-composer-row {
@@ -294,7 +299,7 @@ body[data-omp-conversation-density='compact'] .omp-composer-trailing {
 
 .omp-composer-trailing {
   flex: none;
-  gap: 12px;
+  gap: 16px;
   margin-left: auto;
 }
 
@@ -370,8 +375,9 @@ body[data-omp-conversation-density='compact'] .omp-composer-trailing {
   align-items: center;
   gap: 6px;
   min-width: 0;
-  max-width: min(280px, calc(100vw - 120px));
+  max-width: min(360px, calc(100vw - 120px));
   overflow: hidden;
+  padding-right: 0;
 }
 
 .omp-composer-model-name {
@@ -384,11 +390,45 @@ body[data-omp-conversation-density='compact'] .omp-composer-trailing {
 
 .omp-composer-model-thinking {
   min-width: 0;
-  flex: 0 1 76px;
+  flex: 0 0 auto;
   overflow: hidden;
   color: var(--dsw-alias-label-caption);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.omp-composer-context-meter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  line-height: 0;
+}
+
+.omp-composer-context-ring {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+}
+
+.omp-composer-context-ring-track,
+.omp-composer-context-ring-value {
+  fill: none;
+  stroke-width: 2px;
+}
+
+.omp-composer-context-ring-track {
+  stroke: var(--dsw-alias-border-l2);
+}
+
+.omp-composer-context-ring-value {
+  stroke: var(--dsw-alias-state-business-primary);
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--dsw-transition-fast);
 }
 
 .omp-composer-model > svg {

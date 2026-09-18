@@ -365,7 +365,7 @@
 }
 
 .omp-workspace-project-row:hover,
-.omp-workspace-project-row:focus-within,
+.omp-workspace-project-row:has(:focus-visible),
 .omp-workspace-project-row-menu-open,
 .omp-workspace-session-row:hover,
 .omp-workspace-session-row-active {
@@ -418,12 +418,12 @@
 }
 
 .omp-workspace-project-row:hover .omp-workspace-project-folder,
-.omp-workspace-project-row:focus-within .omp-workspace-project-folder {
+.omp-workspace-project-row:has(:focus-visible) .omp-workspace-project-folder {
   opacity: 0;
 }
 
 .omp-workspace-project-row:hover .omp-workspace-project-chevron,
-.omp-workspace-project-row:focus-within .omp-workspace-project-chevron {
+.omp-workspace-project-row:has(:focus-visible) .omp-workspace-project-chevron {
   opacity: 1;
 }
 
@@ -446,7 +446,7 @@
 }
 
 .omp-workspace-project-row:hover .omp-workspace-project-actions,
-.omp-workspace-project-row:focus-within .omp-workspace-project-actions,
+.omp-workspace-project-row:has(:focus-visible) .omp-workspace-project-actions,
 .omp-workspace-project-row-menu-open .omp-workspace-project-actions {
   opacity: 1;
 }

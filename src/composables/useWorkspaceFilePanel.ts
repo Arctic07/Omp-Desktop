@@ -695,10 +695,10 @@ async function revealSelectedFile(): Promise<void> {
   try {
     const result = await revealWorkspaceFile(root, path)
     if (!isCurrentFileRequest(request, generation) || selectedPath.value !== path) return
-    if (!result.ok) revealError.value = copy.value.fileError
+    if (!result.ok) revealError.value = copy.value.fileRevealError
   } catch (error) {
     if (isCurrentFileRequest(request, generation) && selectedPath.value === path) {
-      revealError.value = describeError(error, copy.value.fileError)
+      revealError.value = describeError(error, copy.value.fileRevealError)
     }
   }
 }

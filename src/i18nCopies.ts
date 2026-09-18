@@ -98,6 +98,7 @@ export const en: SourceCopy = {
   fileEmpty: 'This folder is empty',
   fileLoading: 'Loading…',
   fileError: 'Couldn’t read this file',
+  fileRevealError: 'Unable to reveal this file in the file manager',
   fileSearchPlaceholder: 'Search files and code…',
   fileSearchClear: 'Clear file search',
   fileSearchLoading: 'Searching…',
@@ -160,6 +161,7 @@ export const en: SourceCopy = {
   localSessionTitle: 'Local development session',
   modelLabel: 'Model',
   thinkingLabel: 'Thinking level',
+  contextUsage: 'Context usage',
   thinkingOptions: [
     { value: 'off', label: 'Off' },
     { value: 'low', label: 'Low' },
@@ -544,6 +546,7 @@ export const zh: SourceCopy = {
   fileEmpty: '此目录为空',
   fileLoading: '加载中…',
   fileError: '无法读取此文件',
+  fileRevealError: '无法在文件管理器中显示此文件',
   fileSearchPlaceholder: '搜索文件名和代码片段…',
   fileSearchClear: '清除文件搜索',
   fileSearchLoading: '正在搜索…',
@@ -606,6 +609,7 @@ export const zh: SourceCopy = {
   localSessionTitle: '本地开发会话',
   modelLabel: '模型',
   thinkingLabel: '推理等级',
+  contextUsage: '上下文使用量',
   thinkingOptions: [
     { value: 'off', label: 'Off' },
     { value: 'low', label: 'Low' },

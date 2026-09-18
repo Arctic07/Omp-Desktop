@@ -292,6 +292,7 @@
 }
 
 .omp-source-review-sections {
+  min-width: 0;
   padding-bottom: 10px;
 }
 
@@ -320,10 +321,12 @@
 }
 
 .omp-source-review-section {
+  min-width: 0;
   border-top: 1px solid var(--dsw-alias-border-l2);
 }
 
 .omp-source-review-section-header {
+  width: 100%;
   min-width: 0;
   min-height: 34px;
   background: var(--dsw-alias-bg-layer-2);
@@ -343,6 +346,8 @@
 }
 
 .omp-source-review-section-toggle strong {
+  min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   font-size: 11px;
   font-weight: 600;
@@ -386,6 +391,7 @@
 }
 
 .omp-source-review-files {
+  min-width: 0;
   background: var(--dsw-alias-bg-base);
 }
 
@@ -395,6 +401,7 @@
 }
 
 .omp-source-review-file-header {
+  width: 100%;
   min-width: 0;
   min-height: 34px;
 }
@@ -415,6 +422,7 @@
   flex: 1 1 auto;
   gap: 6px;
   min-height: 34px;
+  overflow: hidden;
   padding: 4px 3px;
   border: 0;
   background: transparent;
@@ -459,7 +467,9 @@
 .omp-source-review-path-copy {
   display: grid;
   min-width: 0;
+  flex: 1 1 auto;
   gap: 1px;
+  overflow: hidden;
   font: 11px/15px var(--ds-font-family-code);
 }
 
@@ -494,16 +504,23 @@
 }
 
 .omp-source-review-file-details {
+  min-width: 0;
   border-top: 1px solid var(--dsw-alias-border-l2);
   background: var(--dsw-alias-markdown-code-block);
 }
 
 .omp-source-review-file-message {
+  min-width: 0;
   margin: 0;
   padding: 12px 14px;
   color: var(--dsw-alias-label-secondary);
   font-size: 11px;
   line-height: 17px;
+  overflow-wrap: anywhere;
+}
+
+.omp-source-review-hunk {
+  min-width: 0;
 }
 
 .omp-source-review-hunk + .omp-source-review-hunk {
@@ -511,6 +528,7 @@
 }
 
 .omp-source-review-hunk-header {
+  min-width: 0;
   margin: 0;
   padding: 6px 10px;
   background: var(--dsw-alias-markdown-code-block-banner);
@@ -518,17 +536,19 @@
   font: 10px/15px var(--ds-font-family-code);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .omp-source-review-lines {
-  overflow-x: auto;
+  min-width: 0;
+  overflow-x: hidden;
   font: var(--dsw-font-markdown-code-block);
 }
 
 .omp-source-review-line {
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr);
-  min-width: max-content;
+  min-width: 0;
   padding-right: 9px;
 }
 
@@ -543,6 +563,7 @@
   color: var(--dsw-alias-label-primary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .omp-source-review-line-add {

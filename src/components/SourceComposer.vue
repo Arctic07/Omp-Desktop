@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, type CSSProperties } from 'vue'
 
 import type { SourceThinkingLevel } from '../i18n'
 import { useDesktopFileDrop, type DesktopDropPath } from '../composables/useDesktopFileDrop'
@@ -82,6 +82,13 @@ const attachmentLabel = computed<string>(() => (
 const selectedThinking = computed(() => (
   copy.value.thinkingOptions.find((option) => option.value === selectedThinkingId.value) ?? copy.value.thinkingOptions[0]
 ))
+const contextUsagePercent = ref<number>(0)
+const contextRingRadius = 8
+const contextRingCircumference = 2 * Math.PI * contextRingRadius
+const contextRingValueStyle = computed<CSSProperties>(() => ({
+  strokeDasharray: `${contextRingCircumference}`,
+  strokeDashoffset: `${contextRingCircumference * (1 - contextUsagePercent.value / 100)}`,
+}))
 
 function attachmentKey(path: string): string {
   return path.replaceAll('\\', '/').replace(/\/+$/, '').toLocaleLowerCase()
@@ -275,17 +282,14 @@ function submit(): void {
         role="textbox"
         aria-multiline="true"
         :aria-label="props.workspaceTrigger ? copy.chooseWorkspace : copy.messagePlaceholder"
+        :data-placeholder="draft.length === 0 ? (props.workspaceTrigger ? copy.composerPlaceholder : copy.messagePlaceholder) : ''"
         :aria-disabled="props.disabled"
         @focus="focused = true"
         @blur="focused = false"
         @input="updateDraft"
         @keydown.enter.exact.prevent="submit"
         @click.stop
-      >
-        <span v-if="draft.length === 0" class="omp-composer-placeholder">
-          {{ props.workspaceTrigger ? copy.composerPlaceholder : copy.messagePlaceholder }}
-        </span>
-      </div>
+      ></div>
     </div>
     <div class="omp-composer-row">
       <div class="omp-composer-tools">
@@ -307,6 +311,7 @@ function submit(): void {
             @keydown.esc.stop="closeModelMenu"
           >
             <span class="omp-composer-model-name">{{ selectedModel.name }}</span>
+            <span class="omp-composer-model-thinking">{{ selectedThinking.label }}</span>
             <AppIcon name="chevron-down" :class="{ 'omp-composer-model-chevron-open': modelMenuOpen }" :size="12" aria-hidden="true" />
           </button>
           <div
@@ -362,8 +367,20 @@ function submit(): void {
             </div>
           </div>
         </div>
+        <span class="omp-composer-context-meter" :title="copy.contextUsage" :aria-label="copy.contextUsage">
+          <svg class="omp-composer-context-ring" viewBox="0 0 20 20" aria-hidden="true">
+            <circle class="omp-composer-context-ring-track" cx="10" cy="10" r="8" />
+            <circle
+              class="omp-composer-context-ring-value"
+              cx="10"
+              cy="10"
+              r="8"
+              :style="contextRingValueStyle"
+            />
+          </svg>
+        </span>
         <button class="omp-composer-send" type="button" :aria-label="copy.sendMessage" :disabled="!canSend" @click.stop="submit">
-          <AppIcon name="send" :size="16" aria-hidden="true" />
+          <AppIcon name="arrow-up" :size="16" aria-hidden="true" />
         </button>
       </div>
     </div>
