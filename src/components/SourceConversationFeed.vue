@@ -12,10 +12,6 @@ const props = defineProps<{
   entries: readonly ConversationFeedEntry[]
 }>()
 
-const emit = defineEmits<{
-  'open-file': [path: string]
-}>()
-
 const { copy } = useAppSettings()
 const openToolIds = ref<Set<string>>(new Set())
 
@@ -44,7 +40,12 @@ function estimateEntrySize(index: number): number {
     return 24 + lineCount * 24 + 8 + 24 + rowGap
   }
   if (entry.role === 'user') {
-    const lineCount = Math.max(1, Math.ceil(entry.text.length / 72))
+    // Each attachment token is one character but paints as its full leaf name.
+    const visualLength = entry.attachments?.reduce(
+      (total, attachment) => total + attachment.name.length - 1,
+      entry.text.length,
+    ) ?? entry.text.length
+    const lineCount = Math.max(1, Math.ceil(visualLength / 72))
     return 92 + lineCount * 22 + rowGap
   }
   if (!openToolIds.value.has(entry.id)) {
@@ -110,7 +111,6 @@ const measureVirtualRow: VNodeRef = (node) => {
               :entry="virtualRow.entry"
               :open="openToolIds.has(virtualRow.entry.id)"
               @update:open="updateToolOpenState(virtualRow.entry.id, $event)"
-              @open-file="emit('open-file', $event)"
             />
           </div>
         </div>

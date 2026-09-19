@@ -390,6 +390,8 @@ export interface SourceCopy {
   removeAttachment: string
   attachedFiles: string
   chooseFiles: string
+  attachFailed: string
+  attachmentTooLarge: string
   toolDone: string
   toolRunning: string
   toolFailed: string

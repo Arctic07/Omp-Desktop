@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
+import { useChipSelectionHighlight } from '../composables/useChipSelectionHighlight'
 import { useAppSettings } from '../stores/appSettings'
+import { writeComposerClipboard } from '../utils/composerClipboard'
 import type { ConversationFeedEntry, ConversationSubmitRequest } from '../utils/conversationTypes'
 import SourceConversationComposer from './SourceConversationComposer.vue'
 import SourceConversationFeed from './SourceConversationFeed.vue'
@@ -20,13 +22,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   'request-workspace': []
   'toggle-right-panel': []
-  'open-file': [path: string]
   submit: [request: ConversationSubmitRequest]
 }>()
 
 const conversationRoot = ref<HTMLElement | null>(null)
 const conversationScroll = ref<HTMLElement | null>(null)
 const { copy } = useAppSettings()
+
+useChipSelectionHighlight(conversationRoot)
 
 type ConversationTab = 'conversation' | 'trajectory'
 
@@ -52,6 +55,11 @@ function scheduleScrollRestore(top: number): void {
     }
     element.scrollTo({ top, behavior: 'auto' })
   })
+}
+
+/** Copy events bubble; owning them here covers both the feed and the composer. */
+function handleAttachmentCopy(event: ClipboardEvent): void {
+  writeComposerClipboard(event, conversationRoot.value)
 }
 
 function selectTab(nextTab: ConversationTab): void {
@@ -108,6 +116,7 @@ onUnmounted((): void => {
     class="omp-conversation-root"
     :data-phase="props.sessionId === null ? 'hero' : 'active'"
     :aria-label="copy.conversationTab"
+    @copy="handleAttachmentCopy"
   >
     <SourceConversationHeader
       v-if="props.sessionId !== null"
@@ -144,7 +153,6 @@ onUnmounted((): void => {
             <SourceConversationFeed
               :scroll-element="conversationScroll"
               :entries="props.entries"
-              @open-file="emit('open-file', $event)"
             />
           </div>
           <div

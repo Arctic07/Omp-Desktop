@@ -62,54 +62,40 @@
   max-width: min(calc(var(--omp-chat-content-width) * 0.702), 82%);
 }
 
-.omp-feed-attachment-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 220px;
-  min-height: 48px;
-  padding: 8px 12px;
-  border: 0.5px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-2);
-  color: var(--dsw-alias-label-secondary);
-}
-
-.omp-feed-attachment-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
-
-.omp-feed-attachment-copy strong {
-  overflow: hidden;
+.omp-feed-chip {
+  /* Same geometry as the composer chip: `inline-block` shares the surrounding
+     text baseline, and its children stay inline so no `overflow: hidden`
+     descendant can move that baseline to its own bottom edge. */
+  display: inline-block;
+  max-width: 240px;
+  margin: 0 2px;
+  padding: 0 0.5em 0.26em;
+  border-radius: 7px;
+  background: var(--dsw-specific-selector);
   color: var(--dsw-alias-label-primary);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 18px;
-  text-overflow: ellipsis;
+  font-size: 0.86em;
+  line-height: 1.3;
+  user-select: text;
   white-space: nowrap;
 }
 
-.omp-feed-attachment-copy small {
+/* Mirrors the composer chip: the highlight is driven by `data-selected` using
+   the system selection colours, because Chrome does not paint `::selection`
+   over the chip's own background. */
+.omp-feed-chip[data-selected='true'] {
+  background: Highlight;
+  color: HighlightText;
+}
+
+.omp-feed-chip[data-selected='true'] .omp-feed-chip-icon {
+  color: inherit;
+}
+
+.omp-feed-chip-icon {
+  margin-right: 0.35em;
+  /* Centred on baseline + x-height/2, the optical axis the chip text reads on. */
+  vertical-align: middle;
   color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
-  line-height: 16px;
-}
-
-.omp-feed-attachment-action {
-  padding: 5px 10px;
-  border: 0;
-  border-radius: 14px;
-  background: var(--dsw-alias-bg-layer-2);
-  color: var(--dsw-alias-label-primary);
-  font-size: 12px;
-  line-height: 18px;
-  cursor: pointer;
-}
-
-.omp-feed-attachment-action:hover {
-  background: var(--dsw-alias-interactive-bg-hover-solid);
 }
 
 .omp-feed-message-bubble {

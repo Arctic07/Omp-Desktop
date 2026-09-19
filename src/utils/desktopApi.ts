@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWebview, type DragDropEvent } from '@tauri-apps/api/webview'
 import { open } from '@tauri-apps/plugin-dialog'
 
+import type { ComposerAttachmentKind } from './composerAttachments'
 import type { ModelEditorModel } from './modelSettings'
 
 export interface DesktopApiError {
@@ -92,6 +93,25 @@ export interface RevealWorkspaceFileResult {
   ok: boolean
 }
 
+export interface ComposerAttachmentRecord {
+  path: string
+  name: string
+  kind: ComposerAttachmentKind
+  mimeType: string
+  size: number
+}
+
+export interface ComposerPasteFile {
+  name: string
+  mimeType: string
+  data: string
+}
+
+export interface ImportComposerFilesResult {
+  files: ComposerAttachmentRecord[]
+  skippedDirectories: number
+}
+
 export type DesktopDragDropEvent = DragDropEvent
 
 export interface DesktopApi {
@@ -111,6 +131,8 @@ export interface DesktopApi {
   commitWorkspace: (root: string, message: string) => Promise<void>
   pullWorkspace: (root: string) => Promise<void>
   searchWorkspaceFiles: (root: string, query: string, maxResults?: number) => Promise<WorkspaceSearchResult>
+  saveComposerPaste: (sessionId: string, files: ComposerPasteFile[]) => Promise<ComposerAttachmentRecord[]>
+  importComposerFiles: (sessionId: string, paths: string[]) => Promise<ImportComposerFilesResult>
 }
 
 export function isDesktopApiError(value: unknown): value is DesktopApiError {
@@ -210,6 +232,20 @@ export async function searchWorkspaceFiles(
   })
 }
 
+export async function saveComposerPaste(
+  sessionId: string,
+  files: ComposerPasteFile[],
+): Promise<ComposerAttachmentRecord[]> {
+  return invoke<ComposerAttachmentRecord[]>('save_composer_paste', { sessionId, files })
+}
+
+export async function importComposerFiles(
+  sessionId: string,
+  paths: string[],
+): Promise<ImportComposerFilesResult> {
+  return invoke<ImportComposerFilesResult>('import_composer_files', { sessionId, paths })
+}
+
 export const desktopApi: DesktopApi = {
   currentWorkingDirectory,
   chooseWorkspace,
@@ -227,4 +263,6 @@ export const desktopApi: DesktopApi = {
   commitWorkspace,
   pullWorkspace,
   searchWorkspaceFiles,
+  saveComposerPaste,
+  importComposerFiles,
 }

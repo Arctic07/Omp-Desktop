@@ -103,7 +103,6 @@ watch(rightPanelOpen, (isOpen) => {
         :right-panel-open="rightPanelOpen"
         @request-workspace="selectWorkspace"
         @toggle-right-panel="toggleRightPanel"
-        @open-file="openRequestedFile"
         @submit="handleMessageSubmit"
       />
     </main>

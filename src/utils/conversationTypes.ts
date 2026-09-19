@@ -1,24 +1,13 @@
 import type { SourceThinkingLevel } from '../i18n'
 import type { AppIconName } from '../components/icons'
-
-export interface ConversationAttachment {
-  path: string
-  name: string
-  meta: string
-}
-
-export function createConversationAttachment(path: string): ConversationAttachment {
-  const normalizedPath = path.trim()
-  const normalizedSeparators = normalizedPath.replaceAll('\\', '/')
-  const name = normalizedSeparators.split('/').at(-1) || normalizedPath
-  return { path: normalizedPath, name, meta: normalizedPath }
-}
+import type { ComposerAttachment } from './composerAttachments'
 
 export interface ConversationUserEntry {
   id: string
   role: 'user'
+  /** Draft text; private-use tokens mark where each attachment sits inline. */
   text: string
-  attachments?: readonly ConversationAttachment[]
+  attachments?: readonly ComposerAttachment[]
 }
 
 export interface ConversationAssistantStats {
@@ -63,7 +52,7 @@ export type ConversationFeedEntry =
 
 export interface ConversationSubmitRequest {
   text: string
-  paths: readonly string[]
+  attachments: readonly ComposerAttachment[]
   modelId: string
   thinkingLevel: SourceThinkingLevel
 }

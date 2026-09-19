@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 
 import { useAppSettings } from '../stores/appSettings'
+import { attachmentChipLabel, attachmentIconName, splitComposerDraft } from '../utils/composerAttachments'
 import { copyText } from '../utils/clipboard'
 import type {
   ConversationAssistantEntry,
-  ConversationAttachment,
   ConversationFeedEntry,
 } from '../utils/conversationTypes'
 import { AppIcon } from './icons'
@@ -19,8 +19,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:open': [open: boolean]
-  'open-file': [path: string]
 }>()
+
+const userSegments = computed(() => {
+  const entry = props.entry
+  return entry.role === 'user'
+    ? splitComposerDraft(entry.text, entry.attachments ?? [])
+    : []
+})
 
 const { copy } = useAppSettings()
 const copied = ref(false)
@@ -61,10 +67,6 @@ function updateToolOpenState(event: Event): void {
   emit('update:open', details.open)
 }
 
-function openAttachment(attachment: ConversationAttachment): void {
-  emit('open-file', attachment.path)
-}
-
 function toolStateLabel(state: 'success' | 'running' | 'error'): string {
   if (state === 'running') {
     return copy.value.toolRunning
@@ -86,26 +88,21 @@ onUnmounted(() => {
     class="omp-feed-message omp-feed-message-user"
   >
     <div class="omp-feed-user-stack">
-      <div
-        v-for="attachment in props.entry.attachments"
-        :key="attachment.path"
-        class="omp-feed-attachment-card"
-      >
-        <AppIcon name="file-text" :size="18" aria-hidden="true" />
-        <span class="omp-feed-attachment-copy">
-          <strong :title="attachment.path">{{ attachment.name }}</strong>
-          <small>{{ attachment.meta }}</small>
-        </span>
-        <button
-          class="omp-feed-attachment-action"
-          type="button"
-          :aria-label="`${copy.reviewOpenFile}: ${attachment.name}`"
-          @click="openAttachment(attachment)"
-        >
-          {{ copy.reviewOpenFile }}
-        </button>
+      <div class="omp-feed-message-bubble">
+        <template v-for="(segment, index) in userSegments" :key="index">
+          <span
+            v-if="segment.attachment !== null"
+            class="omp-feed-chip"
+            :data-omp-attachment-path="segment.attachment.path"
+            :data-omp-attachment-name="segment.attachment.name"
+            :title="segment.attachment.path"
+            :aria-label="`${segment.attachment.name} — ${segment.attachment.path}`"
+          >
+            <AppIcon :name="attachmentIconName(segment.attachment)" class="omp-feed-chip-icon" :size="12" aria-hidden="true" />{{ attachmentChipLabel(segment.attachment.name) }}
+          </span>
+          <span v-else>{{ segment.text }}</span>
+        </template>
       </div>
-      <div class="omp-feed-message-bubble">{{ props.entry.text }}</div>
       <div class="omp-feed-message-meta">
         <span>{{ copy.justNow }}</span>
       </div>

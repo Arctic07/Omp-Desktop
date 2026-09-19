@@ -1,10 +1,39 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, type CSSProperties } from 'vue'
+import {
+  computed,
+  nextTick,
+  ref,
+  type CSSProperties,
+} from 'vue'
 
 import type { SourceThinkingLevel } from '../i18n'
-import { useDesktopFileDrop, type DesktopDropPath } from '../composables/useDesktopFileDrop'
+import { useComposerAttachments } from '../composables/useComposerAttachments'
+import {
+  useDesktopFileDrop,
+  type DesktopDropPath,
+  type DesktopDropPoint,
+} from '../composables/useDesktopFileDrop'
 import { useAppSettings } from '../stores/appSettings'
+import {
+  clipboardAttachmentFiles,
+  isAbsolutePath,
+  preferClipboardText,
+  type ComposerAttachment,
+} from '../utils/composerAttachments'
+import {
+  composerIndexAtPoint,
+  composerSelectionRange,
+  paintComposerContent,
+  placeComposerCaret,
+  readComposerDraft,
+  type ComposerChipActions,
+} from '../utils/composerEditor'
 import type { ConversationSubmitRequest } from '../utils/conversationTypes'
+import {
+  composerClipboardSegmentsFromTransfer,
+  writeComposerClipboard,
+  type ComposerClipboardSegment,
+} from '../utils/composerClipboard'
 import { chooseFiles as chooseFilesFromDialog } from '../utils/desktopApi'
 import { AppIcon } from './icons'
 
@@ -44,14 +73,15 @@ const modelOptions: readonly SourceModel[] = modelGroups.flatMap((group) => grou
 type ModelId = string
 type ModelMenuPane = 'root' | 'model' | 'thinking'
 
-interface ComposerAttachment {
-  path: string
-  name: string
+interface PendingInsert {
+  start: number
+  end: number
 }
 
 const props = defineProps<{
   disabled?: boolean
   workspaceTrigger?: boolean
+  sessionId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -66,18 +96,40 @@ const modelMenuOpen = ref(false)
 const modelMenuPane = ref<ModelMenuPane>('root')
 const selectedModelId = ref<ModelId>('gpt-5.6-luna')
 const selectedThinkingId = ref<SourceThinkingLevel>('high')
-const attachments = ref<ComposerAttachment[]>([])
-const dropNotice = ref('')
 const composerCard = ref<HTMLDivElement | null>(null)
 const composerInput = ref<HTMLDivElement | null>(null)
+const attachmentsState = useComposerAttachments({
+  sessionId: () => props.sessionId ?? null,
+  blocked: () => props.disabled === true,
+})
+const {
+  attachments,
+  busy: attaching,
+  notice,
+  attachmentCount,
+  removeLabelFor,
+  addClipboardFiles,
+  addPaths,
+  removeAttachment,
+  syncDraft,
+  reset: resetAttachments,
+} = attachmentsState
+
+let pendingInsert: PendingInsert | null = null
+/** Last caret seen inside the editable; a native drop carries no selection. */
+let rememberedCaret = 0
+
+const chipActions: ComposerChipActions = { removeLabelFor, onRemove: handleChipRemove }
 const canSend = computed<boolean>(() => (
-  (draft.value.trim().length > 0 || attachments.value.length > 0) && props.disabled !== true
+  (draft.value.trim().length > 0 || attachments.value.length > 0)
+  && props.disabled !== true
+  && !attaching.value
 ))
 const selectedModel = computed<SourceModel>(() => (
   modelOptions.find((model) => model.id === selectedModelId.value) ?? modelOptions[0]!
 ))
 const attachmentLabel = computed<string>(() => (
-  copy.value.attachedFiles.replace('{count}', String(attachments.value.length))
+  copy.value.attachedFiles.replace('{count}', String(attachmentCount.value))
 ))
 const selectedThinking = computed(() => (
   copy.value.thinkingOptions.find((option) => option.value === selectedThinkingId.value) ?? copy.value.thinkingOptions[0]
@@ -90,31 +142,220 @@ const contextRingValueStyle = computed<CSSProperties>(() => ({
   strokeDashoffset: `${contextRingCircumference * (1 - contextUsagePercent.value / 100)}`,
 }))
 
-function attachmentKey(path: string): string {
-  return path.replaceAll('\\', '/').replace(/\/+$/, '').toLocaleLowerCase()
-}
-
-function attachmentName(path: string): string {
-  const normalized = path.replaceAll('\\', '/')
-  return normalized.slice(normalized.lastIndexOf('/') + 1) || normalized
-}
-
-function isDirectoryPath(path: string): boolean {
-  const trimmed = path.trim()
-  return trimmed === '.' || trimmed === '..' || trimmed.endsWith('/') || trimmed.endsWith('\\')
-}
-
 function requestWorkspace(): void {
   if (props.workspaceTrigger === true) {
     emit('request-workspace')
   }
 }
 
-function updateDraft(event: Event): void {
-  const target = event.currentTarget
-  if (target instanceof HTMLElement) {
-    draft.value = target.innerText
+function currentDraft(): string {
+  const input = composerInput.value
+  return input === null ? draft.value : readComposerDraft(input)
+}
+
+/** Repaint the editable from a draft string and drop metadata that left it. */
+function renderDraft(text: string, caret: number | null): void {
+  const input = composerInput.value
+  draft.value = text
+  syncDraft(text)
+  if (input === null) {
+    return
   }
+  paintComposerContent(input, text, attachments.value, chipActions)
+  if (caret !== null) {
+    placeComposerCaret(input, caret)
+  }
+}
+
+function syncFromEditor(): void {
+  const input = composerInput.value
+  if (input === null) {
+    return
+  }
+  const text = readComposerDraft(input)
+  draft.value = text
+  syncDraft(text)
+  rememberCaret()
+}
+
+function handleFocus(): void {
+  focused.value = true
+  rememberCaret()
+}
+
+function rememberCaret(): void {
+  const input = composerInput.value
+  if (input === null) {
+    return
+  }
+  const selection = composerSelectionRange(input)
+  if (selection !== null) {
+    rememberedCaret = selection.end
+  }
+}
+
+function captureInsertIndex(point: DesktopDropPoint | null = null): void {
+  const input = composerInput.value
+  const text = currentDraft()
+  const dropped = point === null || input === null
+    ? null
+    : composerIndexAtPoint(input, point.x, point.y)
+  const selection = dropped === null && input !== null ? composerSelectionRange(input) : null
+  const fallback = Math.min(rememberedCaret, text.length)
+  // A drop picks its own spot; a paste follows the caret, which may sit stale
+  // after a native drop the webview never forwards as a DOM event.
+  const start = dropped ?? selection?.start ?? fallback
+  const end = dropped ?? selection?.end ?? fallback
+  pendingInsert = { start, end }
+  rememberedCaret = end
+}
+
+/** Write a freshly built fragment at the caret captured before the import. */
+function insertFragment(fragment: string): void {
+  const pending = pendingInsert
+  pendingInsert = null
+  const input = composerInput.value
+  if (fragment.length === 0 || input === null) {
+    return
+  }
+  const text = currentDraft()
+  const start = Math.min(pending?.start ?? text.length, text.length)
+  const end = Math.max(start, Math.min(pending?.end ?? text.length, text.length))
+  const caret = start + fragment.length
+  renderDraft(`${text.slice(0, start)}${fragment}${text.slice(end)}`, caret)
+  rememberedCaret = caret
+  input.focus()
+}
+
+/** Write freshly imported attachments at the caret captured before the import. */
+function insertAttachments(added: readonly ComposerAttachment[]): void {
+  insertFragment(added.map((attachment) => attachment.token).join(''))
+}
+
+function handleChipRemove(token: string): void {
+  const text = currentDraft()
+  const index = text.indexOf(token)
+  if (index < 0) {
+    return
+  }
+  removeAttachment(token)
+  renderDraft(`${text.slice(0, index)}${text.slice(index + 1)}`, index)
+  rememberedCaret = index
+  void nextTick(() => composerInput.value?.focus())
+}
+
+/** Re-import every chip in a pasted selection; text between them stays verbatim. */
+async function insertClipboardSegments(segments: readonly ComposerClipboardSegment[]): Promise<void> {
+  const paths: string[] = []
+  for (const segment of segments) {
+    if (segment.path !== null && isAbsolutePath(segment.path)) {
+      paths.push(segment.path)
+    }
+  }
+  const added = await addPaths(paths, true)
+  let cursor = 0
+  let fragment = ''
+  for (const segment of segments) {
+    if (segment.path === null) {
+      fragment += segment.text
+      continue
+    }
+    if (!isAbsolutePath(segment.path)) {
+      fragment += segment.path
+      continue
+    }
+    const record = added[cursor]
+    cursor += 1
+    if (record !== undefined) {
+      if (segment.name !== null) {
+        attachmentsState.renameAttachment(record.token, segment.name)
+      }
+      fragment += record.token
+    }
+  }
+  insertFragment(fragment)
+}
+
+async function handlePaste(event: ClipboardEvent): Promise<void> {
+  const data = event.clipboardData
+  if (data === null || props.disabled === true) {
+    return
+  }
+  const segments = composerClipboardSegmentsFromTransfer(data)
+  if (segments !== null && segments.some((segment) => segment.path !== null)) {
+    event.preventDefault()
+    captureInsertIndex()
+    void insertClipboardSegments(segments)
+    return
+  }
+  const files = clipboardAttachmentFiles(data)
+  if (files.length === 0 || preferClipboardText(data.getData('text/plain'), files)) {
+    return
+  }
+  event.preventDefault()
+  captureInsertIndex()
+  insertAttachments(await addClipboardFiles(files))
+}
+
+/** A chip selection must leave the clipboard and the draft in agreement. */
+function handleClipboardCut(event: ClipboardEvent): void {
+  const input = composerInput.value
+  if (!writeComposerClipboard(event, input) || input === null) {
+    return
+  }
+  const selection = composerSelectionRange(input)
+  if (selection === null || selection.start === selection.end) {
+    return
+  }
+  const text = currentDraft()
+  renderDraft(`${text.slice(0, selection.start)}${text.slice(selection.end)}`, selection.start)
+  rememberedCaret = selection.start
+}
+
+function handleDroppedPaths(paths: readonly DesktopDropPath[], point: DesktopDropPoint | null): void {
+  if (props.disabled === true) {
+    return
+  }
+  const files = paths.filter((item) => item.kind !== 'directory' && isAbsolutePath(item.path))
+  if (files.length === 0) {
+    if (paths.length > 0) {
+      notice.value = copy.value.droppedDirectory
+    }
+    return
+  }
+  captureInsertIndex(point)
+  void addPaths(files.map((item) => item.path)).then(insertAttachments)
+}
+
+const { dragging, handleDragOver, handleDrop, handleDragLeave } = useDesktopFileDrop(composerCard, handleDroppedPaths)
+
+function handleDesktopDragOver(event: DragEvent): void {
+  if (props.disabled !== true) {
+    handleDragOver(event)
+  }
+}
+
+function handleDesktopDrop(event: DragEvent): void {
+  if (props.disabled !== true) {
+    handleDrop(event)
+  }
+}
+
+async function selectFiles(): Promise<void> {
+  if (props.disabled === true || attaching.value) {
+    return
+  }
+  let selectedPaths: readonly string[] = []
+  try {
+    selectedPaths = await chooseFilesFromDialog(copy.value.chooseFiles)
+  } catch {
+    return
+  }
+  if (selectedPaths.length === 0) {
+    return
+  }
+  captureInsertIndex()
+  insertAttachments(await addPaths(selectedPaths))
 }
 
 function openModelMenu(): void {
@@ -155,76 +396,15 @@ function selectThinking(id: SourceThinkingLevel): void {
   closeModelMenu()
 }
 
-function removeAttachment(path: string): void {
-  const key = attachmentKey(path)
-  attachments.value = attachments.value.filter((attachment) => attachmentKey(attachment.path) !== key)
-}
-
-function addAttachmentPaths(paths: readonly DesktopDropPath[]): void {
-  if (props.disabled === true) {
-    return
-  }
-
-  const nextAttachments = [...attachments.value]
-  const seen = new Set(nextAttachments.map((attachment) => attachmentKey(attachment.path)))
-  let skippedDirectory = false
-  for (const item of paths) {
-    const path = item.path.trim()
-    if (path.length === 0) {
-      continue
-    }
-    if (item.kind === 'directory' || isDirectoryPath(path)) {
-      skippedDirectory = true
-      continue
-    }
-    const key = attachmentKey(path)
-    if (seen.has(key)) {
-      continue
-    }
-    seen.add(key)
-    nextAttachments.push({ path, name: attachmentName(path) })
-  }
-  attachments.value = nextAttachments
-  dropNotice.value = skippedDirectory ? copy.value.droppedDirectory : ''
-}
-
-function handleDesktopDragOver(event: DragEvent): void {
-  if (props.disabled !== true) {
-    handleDragOver(event)
-  }
-}
-
-function handleDesktopDrop(event: DragEvent): void {
-  if (props.disabled !== true) {
-    handleDrop(event)
-  }
-}
-
-function handleDroppedPaths(paths: readonly DesktopDropPath[]): void {
-  addAttachmentPaths(paths)
-}
-
-const { dragging, handleDragOver, handleDrop, handleDragLeave } = useDesktopFileDrop(composerCard, handleDroppedPaths)
-
-async function selectFiles(): Promise<void> {
-  if (props.disabled === true) {
-    return
-  }
-  try {
-    const selectedPaths = await chooseFilesFromDialog(copy.value.chooseFiles)
-    addAttachmentPaths(selectedPaths.map((path) => ({ path, kind: 'file' })))
-  } catch {
-    return
-  }
-}
-
 function clearComposerInput(): void {
-  if (composerInput.value !== null) {
-    composerInput.value.textContent = ''
-  }
   draft.value = ''
-  attachments.value = []
-  dropNotice.value = ''
+  pendingInsert = null
+  rememberedCaret = 0
+  resetAttachments()
+  const input = composerInput.value
+  if (input !== null) {
+    paintComposerContent(input, '', [], chipActions)
+  }
 }
 
 function submit(): void {
@@ -232,13 +412,21 @@ function submit(): void {
     return
   }
   emit('submit', {
-    text: draft.value.trim(),
-    paths: attachments.value.map((attachment) => attachment.path),
+    text: currentDraft(),
+    attachments: attachments.value,
     modelId: selectedModelId.value,
     thinkingLevel: selectedThinkingId.value,
   })
   clearComposerInput()
   void nextTick(() => composerInput.value?.focus())
+}
+
+function submitFromKey(event: KeyboardEvent): void {
+  if (event.target !== composerInput.value) {
+    return
+  }
+  event.preventDefault()
+  submit()
 }
 </script>
 
@@ -259,21 +447,7 @@ function submit(): void {
   >
     <div v-if="dragging" class="omp-composer-drop-overlay" aria-live="polite">{{ copy.dropFilesHere }}</div>
     <div class="omp-composer-scroll">
-      <div v-if="attachments.length > 0" class="omp-composer-attachments" role="list" :aria-label="attachmentLabel">
-        <div v-for="attachment in attachments" :key="attachmentKey(attachment.path)" class="omp-composer-attachment" role="listitem">
-          <AppIcon name="file-text" :size="15" aria-hidden="true" />
-          <span class="omp-composer-attachment-copy" :title="attachment.path">{{ attachment.name }}</span>
-          <button
-            class="omp-composer-attachment-remove"
-            type="button"
-            :aria-label="`${copy.removeAttachment}: ${attachment.name}`"
-            @click.stop="removeAttachment(attachment.path)"
-          >
-            <AppIcon name="x" :size="13" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-      <p v-if="dropNotice" class="omp-composer-drop-notice" role="status">{{ dropNotice }}</p>
+      <p v-if="notice" class="omp-composer-drop-notice" role="status">{{ notice }}</p>
       <div
         ref="composerInput"
         class="omp-composer-input"
@@ -281,13 +455,18 @@ function submit(): void {
         :contenteditable="props.disabled !== true"
         role="textbox"
         aria-multiline="true"
+        :aria-busy="attaching"
         :aria-label="props.workspaceTrigger ? copy.chooseWorkspace : copy.messagePlaceholder"
         :data-placeholder="draft.length === 0 ? (props.workspaceTrigger ? copy.composerPlaceholder : copy.messagePlaceholder) : ''"
         :aria-disabled="props.disabled"
-        @focus="focused = true"
+        @focus="handleFocus"
         @blur="focused = false"
-        @input="updateDraft"
-        @keydown.enter.exact.prevent="submit"
+        @input="syncFromEditor"
+        @keyup="rememberCaret"
+        @mouseup="rememberCaret"
+        @paste="handlePaste"
+        @cut="handleClipboardCut"
+        @keydown.enter.exact="submitFromKey"
         @click.stop
       ></div>
     </div>
@@ -296,7 +475,7 @@ function submit(): void {
         <button class="omp-composer-add" type="button" :aria-label="copy.addFiles" :disabled="props.disabled" @click.stop="selectFiles">
           <AppIcon name="plus" :size="14" aria-hidden="true" />
         </button>
-        <span v-if="attachments.length > 0" class="omp-composer-attachment-count" aria-hidden="true">{{ attachments.length }}</span>
+        <span v-if="attachmentCount > 0" class="omp-composer-attachment-count" :aria-label="attachmentLabel">{{ attachmentCount }}</span>
       </div>
       <div class="omp-composer-trailing">
         <div v-if="props.disabled !== true" class="omp-composer-model-picker">

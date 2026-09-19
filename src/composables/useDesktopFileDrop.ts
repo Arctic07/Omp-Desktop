@@ -13,7 +13,16 @@ export interface DesktopDropPath {
   kind: DesktopDropPathKind
 }
 
-export type DesktopDropHandler = (paths: readonly DesktopDropPath[]) => void
+/** Drop point in CSS pixels, matching client coordinates inside the window. */
+export interface DesktopDropPoint {
+  x: number
+  y: number
+}
+
+export type DesktopDropHandler = (
+  paths: readonly DesktopDropPath[],
+  point: DesktopDropPoint | null,
+) => void
 
 interface FileWithPath extends File {
   path?: string
@@ -153,7 +162,10 @@ export function useDesktopFileDrop(target: Ref<HTMLElement | null>, onDrop: Desk
     }
     dragging.value = false
     if (inside && event.paths.length > 0) {
-      onDrop(event.paths.map((path) => ({ path, kind: 'unknown' })))
+      onDrop(
+        event.paths.map((path) => ({ path, kind: 'unknown' })),
+        { x: event.position.x / scaleFactor, y: event.position.y / scaleFactor },
+      )
     }
   }
 
@@ -176,7 +188,7 @@ export function useDesktopFileDrop(target: Ref<HTMLElement | null>, onDrop: Desk
     event.preventDefault()
     event.stopPropagation()
     dragging.value = false
-    onDrop(pathsFromDomDrop(event))
+    onDrop(pathsFromDomDrop(event), { x: event.clientX, y: event.clientY })
   }
 
   function handleDragLeave(event: DragEvent): void {

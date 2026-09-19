@@ -2,7 +2,6 @@ import { computed, onMounted, onUnmounted, ref, type ComputedRef, type Ref } fro
 
 import { useAppSettings } from '../stores/appSettings'
 import type { ConversationFeedEntry, ConversationSubmitRequest } from '../utils/conversationTypes'
-import { createConversationAttachment } from '../utils/conversationTypes'
 import {
   chooseWorkspace,
   currentWorkingDirectory,
@@ -167,7 +166,7 @@ export function useAppShell(): AppShellState {
 
   function handleMessageSubmit(request: ConversationSubmitRequest): void {
     const text = request.text.trim()
-    if (text.length === 0) {
+    if (text.length === 0 && request.attachments.length === 0) {
       return
     }
 
@@ -182,19 +181,20 @@ export function useAppShell(): AppShellState {
           ...project,
           sessions: [...project.sessions, {
             id: sessionId,
-            title: text.slice(0, 48),
+            title: request.attachments.length > 0 && text.length === 0
+              ? request.attachments[0]!.name
+              : text.slice(0, 48),
             time: copy.value.justNow,
           }],
         }]
       }
     }
 
-    const attachments = request.paths.map(createConversationAttachment)
     const entry: ConversationFeedEntry = {
       id: `${sessionId}-message-${conversationEntries.value.length + 1}`,
       role: 'user',
       text,
-      ...(attachments.length > 0 ? { attachments } : {}),
+      ...(request.attachments.length > 0 ? { attachments: request.attachments } : {}),
     }
     const nextEntries = [
       ...(conversationEntriesBySession.value[sessionId] ?? []),

@@ -228,6 +228,18 @@
   min-height: 36px;
 }
 
+/* `base.css` draws the shared ring 2px outside the editable, where the scroll
+   container's overflow clips it down to a stray line under the notice. Surface
+   keyboard focus on the card instead: visible, unclipped, and no inner box. */
+.omp-composer:has(.omp-composer-input:focus-visible) {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 2px;
+}
+
+.omp-composer-input:focus-visible {
+  outline: none;
+}
+
 .omp-composer-seat-session .omp-composer-input::before {
   display: block;
   white-space: nowrap;
@@ -641,56 +653,6 @@ body[data-omp-conversation-density='compact'] .omp-composer-trailing {
   pointer-events: none;
 }
 
-.omp-composer-attachments {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 14px 2px;
-}
-
-.omp-composer-attachment {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  max-width: min(100%, 280px);
-  min-height: 26px;
-  padding: 3px 5px 3px 8px;
-  border: 0.5px solid var(--dsw-alias-border-l3);
-  border-radius: 9px;
-  background: var(--dsw-specific-selector);
-  color: var(--dsw-alias-label-secondary);
-}
-
-.omp-composer-attachment-copy {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--dsw-alias-label-primary);
-  font-size: 12px;
-  line-height: 18px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.omp-composer-attachment-remove {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--dsw-alias-label-tertiary);
-  cursor: pointer;
-}
-
-.omp-composer-attachment-remove:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-primary);
-}
-
 .omp-composer-attachment-count {
   min-width: 18px;
   padding: 1px 5px;
@@ -700,6 +662,85 @@ body[data-omp-conversation-density='compact'] .omp-composer-trailing {
   font-size: 11px;
   line-height: 16px;
   text-align: center;
+}
+
+.omp-composer-chip {
+  /* `inline-block` exposes the real baseline of the chip's own text, which then
+     shares the surrounding text baseline. Its children must stay inline: any
+     inline-block with `overflow: hidden` inside would move the chip's baseline
+     to that child's bottom edge (CSS 2.1 §10.8.1) and lift the text out of line. */
+  display: inline-block;
+  max-width: 240px;
+  margin: 0 2px;
+  /* Padding sits above the label, never below it: bottom padding grows the box
+     downwards while the glyphs stay on the shared baseline, so the background
+     ends up ~3px under the surrounding text's optical centre. */
+  padding: 0.26em 0.5em 0;
+  border-radius: 7px;
+  background: var(--dsw-specific-selector);
+  color: var(--dsw-alias-label-primary);
+  font-size: 0.86em;
+  line-height: 1.3;
+  user-select: text;
+  white-space: nowrap;
+}
+
+/* Chrome does not paint `::selection` over the chip's own background, so the
+   highlight is driven by `data-selected` (useChipSelectionHighlight) using the
+   system selection colours to match the surrounding text exactly. */
+.omp-composer-chip[data-selected='true'] {
+  background: Highlight;
+  color: HighlightText;
+}
+
+.omp-composer-chip[data-selected='true'] .omp-composer-chip-icon,
+.omp-composer-chip[data-selected='true'] .omp-composer-chip-remove {
+  color: inherit;
+}
+
+/* Icon and remove button both use `vertical-align: middle`, which centres their
+   box on baseline + x-height/2 — the optical axis the chip text reads on. */
+.omp-composer-chip-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.35em;
+  vertical-align: middle;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.omp-composer-chip-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.omp-composer-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  margin-left: 0.2em;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  vertical-align: middle;
+  user-select: none;
+  cursor: pointer;
+}
+
+.omp-composer-chip-remove svg {
+  display: block;
+  width: 0.9em;
+  height: 0.9em;
+}
+
+.omp-composer-chip-remove:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
 }
 
 .omp-composer-drop-notice {

@@ -60,6 +60,7 @@ const { copy } = useAppSettings()
         <SourceComposer
           :disabled="props.sessionId === null && props.workspacePath === null"
           :workspace-trigger="props.sessionId === null && props.workspacePath === null"
+          :session-id="props.sessionId"
           @request-workspace="emit('request-workspace')"
           @submit="emit('submit', $event)"
         />

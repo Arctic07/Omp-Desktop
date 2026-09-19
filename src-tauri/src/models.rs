@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 pub(crate) struct FileEntry {
@@ -105,4 +105,31 @@ pub(crate) struct ModelCandidate {
 #[derive(Serialize)]
 pub(crate) struct ModelCatalog {
     pub(crate) models: Vec<ModelCandidate>,
+}
+
+#[derive(Deserialize)]
+pub(crate) struct ComposerPasteFile {
+    #[serde(default, rename = "name")]
+    pub(crate) name: Option<String>,
+    #[serde(default, rename = "mimeType")]
+    pub(crate) mime_type: Option<String>,
+    #[serde(rename = "data")]
+    pub(crate) data: String,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ComposerAttachment {
+    pub(crate) path: String,
+    pub(crate) name: String,
+    pub(crate) kind: String,
+    #[serde(rename = "mimeType")]
+    pub(crate) mime_type: String,
+    pub(crate) size: u64,
+}
+
+#[derive(Serialize)]
+pub(crate) struct ImportComposerFilesResult {
+    pub(crate) files: Vec<ComposerAttachment>,
+    #[serde(rename = "skippedDirectories")]
+    pub(crate) skipped_directories: usize,
 }

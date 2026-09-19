@@ -10,6 +10,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
+            commands::attachments::import_composer_files,
+            commands::attachments::save_composer_paste,
             commands::workspace::current_working_directory,
             commands::workspace::list_workspace_entries,
             commands::workspace::read_workspace_file,
