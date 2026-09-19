@@ -20,6 +20,15 @@
   flex-direction: column;
 }
 
+/* The hero owns the body and scrolls when the window is too short to hold it.
+   Nothing here may change the stage's box: kept panes live inside it, and a
+   phase change must not re-measure them (that would move their offsets). */
+.omp-conversation-body-hero {
+  justify-content: center;
+  overflow-y: auto;
+}
+
+/* The scrolling box of one retained pane (SourceConversationPane). */
 .omp-conversation-scroll-body {
   display: flex;
   flex: 1;
@@ -31,47 +40,49 @@
   overflow-anchor: none;
 }
 
-.omp-conversation-scroll-body-empty {
-  justify-content: center;
-}
-
-.omp-conversation-scroll-body-session {
-  justify-content: flex-start;
-}
-
-.omp-conversation-view {
+.omp-conversation-stage {
   position: relative;
-  flex: 1 0 auto;
-  min-height: 0;
-}
-
-.omp-conversation-view-trajectory {
   display: flex;
-  flex: 1 1 0;
+  flex: 1;
   min-height: 0;
   flex-direction: column;
-  overflow: hidden;
 }
 
-.omp-conversation-tab-pane {
-  width: 100%;
-}
-
-.omp-conversation-tab-pane-trajectory {
+.omp-conversation-panes {
+  position: relative;
   display: flex;
-  min-height: 0;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.omp-conversation-view-trajectory .omp-conversation-tab-pane-trajectory {
   flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
 }
 
-.omp-conversation-tab-pane-inactive {
+.omp-conversation-trajectory {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* A kept-but-not-shown box: the hero phase and the inactive tab both use it to
+   hold a layout that carries scroll offsets, so this is never `display: none`. */
+.omp-conversation-kept-hidden {
   position: absolute;
   inset: 0;
-  width: auto;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.omp-conversation-pane {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.omp-conversation-pane[data-visible='false'] {
+  position: absolute;
+  inset: 0;
   visibility: hidden;
   pointer-events: none;
 }

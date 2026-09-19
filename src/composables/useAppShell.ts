@@ -8,6 +8,7 @@ import {
   formatDesktopError,
   type ReviewDiffTarget,
 } from '../utils/desktopApi'
+import { retainSessionPane, type SessionScrollMemory } from '../utils/sessionPanes'
 import { createWorkspaceProject, type WorkspaceProject } from '../utils/workspaceTypes'
 
 const COMPACT_MEDIA_QUERY = '(max-width: 1023px)'
@@ -27,7 +28,9 @@ export interface AppShellState {
   workspacePath: Ref<string | null>
   workspaceError: Ref<string>
   workspaceProjects: Ref<readonly WorkspaceProject[]>
-  conversationEntries: Ref<readonly ConversationFeedEntry[]>
+  retainedSessionIds: Ref<readonly string[]>
+  conversationEntriesBySession: Ref<Record<string, readonly ConversationFeedEntry[]>>
+  sessionScrollMemory: Map<string, SessionScrollMemory>
   rightPanelOpen: Ref<boolean>
   rightPanelTab: Ref<WorkPanelTab>
   requestedFile: Ref<RequestedFile | null>
@@ -64,8 +67,8 @@ export function useAppShell(): AppShellState {
   const workspacePath = ref<string | null>(null)
   const workspaceError = ref('')
   const workspaceProjects = ref<readonly WorkspaceProject[]>([])
+  const retainedSessionIds = ref<readonly string[]>([])
   const conversationEntriesBySession = ref<Record<string, readonly ConversationFeedEntry[]>>({})
-  const conversationEntries = ref<readonly ConversationFeedEntry[]>([])
   const rightPanelOpen = ref(false)
   const rightPanelTab = ref<WorkPanelTab>('files')
   const requestedFile = ref<RequestedFile | null>(null)
@@ -76,6 +79,30 @@ export function useAppShell(): AppShellState {
   let workspaceRequestToken = 0
   let requestSequence = 0
   let localSessionSequence = 0
+  /**
+   * Monotonic per-session entry numbering; row identity must not follow array
+   * length. A Map because session ids are inserted at runtime from IPC and are
+   * arbitrary strings (an object key would collide with prototype names).
+   */
+  const entrySequences = new Map<string, number>()
+  /**
+   * Last visit per session, consulted only to pick the least recently used pane
+   * to evict. Pane order itself stays append-only (see `sessionPanes`), because
+   * reordering the DOM would reset the scroll positions panes exist to keep.
+   */
+  const sessionVisits = new Map<string, number>()
+  let visitSequence = 0
+
+  /**
+   * Where each session was left, so a returning pane lands on the same line.
+   *
+   * Mounted panes are bounded, so an evicted session loses its scroller — and
+   * with it the only copy of the reader's position and follow state. This
+   * outlives the pane. Deliberately not reactive: it is written on every scroll
+   * event and read once when a pane is created, so reactivity would only
+   * re-render panes.
+   */
+  const sessionScrollMemory = new Map<string, SessionScrollMemory>()
 
   const { copy } = useAppSettings()
   const sidebarCollapsed = computed<boolean>(() => (
@@ -108,7 +135,8 @@ export function useAppShell(): AppShellState {
 
   function startNewSession(): void {
     activeSessionId.value = null
-    conversationEntries.value = []
+    // Retained panes stay mounted, hidden: the hero owns the surface, and
+    // returning to a session from here must still land where it was left.
     rightPanelOpen.value = false
     requestedFile.value = null
     requestedDiff.value = null
@@ -117,8 +145,19 @@ export function useAppShell(): AppShellState {
 
   function selectSession(sessionId: string): void {
     activeSessionId.value = sessionId
-    conversationEntries.value = conversationEntriesBySession.value[sessionId] ?? []
+    retainSession(sessionId)
     settingsOpen.value = false
+  }
+
+  /** Records the visit and mounts a pane for the session if it has none yet. */
+  function retainSession(sessionId: string): void {
+    visitSequence += 1
+    sessionVisits.set(sessionId, visitSequence)
+    retainedSessionIds.value = retainSessionPane(
+      retainedSessionIds.value,
+      sessionVisits,
+      sessionId,
+    )
   }
 
   function openSettings(): void {
@@ -175,6 +214,7 @@ export function useAppShell(): AppShellState {
       localSessionSequence += 1
       sessionId = `session-local-${Date.now()}-${localSessionSequence}`
       activeSessionId.value = sessionId
+      retainSession(sessionId)
       const project = workspaceProjects.value[0]
       if (project !== undefined) {
         workspaceProjects.value = [{
@@ -190,29 +230,32 @@ export function useAppShell(): AppShellState {
       }
     }
 
+    const sequence = (entrySequences.get(sessionId) ?? 0) + 1
+    entrySequences.set(sessionId, sequence)
     const entry: ConversationFeedEntry = {
-      id: `${sessionId}-message-${conversationEntries.value.length + 1}`,
+      id: `${sessionId}-message-${sequence}`,
       role: 'user',
       text,
       ...(request.attachments.length > 0 ? { attachments: request.attachments } : {}),
     }
-    const nextEntries = [
-      ...(conversationEntriesBySession.value[sessionId] ?? []),
-      entry,
-    ]
     conversationEntriesBySession.value = {
       ...conversationEntriesBySession.value,
-      [sessionId]: nextEntries,
+      [sessionId]: [
+        ...(conversationEntriesBySession.value[sessionId] ?? []),
+        entry,
+      ],
     }
-    conversationEntries.value = nextEntries
   }
 
   function setWorkspacePath(path: string): void {
     workspacePath.value = path
     workspaceProjects.value = [createWorkspaceProject(path)]
     activeSessionId.value = null
+    retainedSessionIds.value = []
     conversationEntriesBySession.value = {}
-    conversationEntries.value = []
+    entrySequences.clear()
+    sessionVisits.clear()
+    sessionScrollMemory.clear()
     requestedFile.value = null
     requestedDiff.value = null
     refreshToken.value += 1
@@ -285,7 +328,9 @@ export function useAppShell(): AppShellState {
     workspacePath,
     workspaceError,
     workspaceProjects,
-    conversationEntries,
+    retainedSessionIds,
+    conversationEntriesBySession,
+    sessionScrollMemory,
     rightPanelOpen,
     rightPanelTab,
     requestedFile,

@@ -5,9 +5,10 @@
   width: 100%;
 }
 
+/* The composer is a dock below the panes, not a scroller child: no transcript
+   can scroll underneath it, so the newest entry is always fully readable. */
 .omp-composer-seat-session {
-  position: sticky;
-  bottom: 0;
+  position: relative;
   z-index: 7;
   padding-top: 8px;
   padding-bottom: 8px;

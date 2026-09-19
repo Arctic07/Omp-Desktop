@@ -22,7 +22,9 @@ const {
   workspacePath,
   workspaceError,
   workspaceProjects,
-  conversationEntries,
+  retainedSessionIds,
+  conversationEntriesBySession,
+  sessionScrollMemory,
   rightPanelOpen,
   rightPanelTab,
   requestedFile,
@@ -92,14 +94,15 @@ watch(rightPanelOpen, (isOpen) => {
         @add-workspace="selectWorkspace"
       />
     </div>
-    <main class="omp-center-column">
+    <main class="omp-center-column" :inert="settingsOpen">
       <SourceConversation
-        v-if="!settingsOpen"
         :session-id="activeSessionId"
         :session-title="activeSessionTitle"
         :workspace-path="workspacePath"
         :workspace-error="workspaceError"
-        :entries="conversationEntries"
+        :retained-session-ids="retainedSessionIds"
+        :entries-by-session="conversationEntriesBySession"
+        :session-scroll-memory="sessionScrollMemory"
         :right-panel-open="rightPanelOpen"
         @request-workspace="selectWorkspace"
         @toggle-right-panel="toggleRightPanel"

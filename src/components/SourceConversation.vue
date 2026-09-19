@@ -1,21 +1,33 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { useChipSelectionHighlight } from '../composables/useChipSelectionHighlight'
 import { useAppSettings } from '../stores/appSettings'
 import { writeComposerClipboard } from '../utils/composerClipboard'
 import type { ConversationFeedEntry, ConversationSubmitRequest } from '../utils/conversationTypes'
+import type { SessionScrollMemory } from '../utils/sessionPanes'
 import SourceConversationComposer from './SourceConversationComposer.vue'
-import SourceConversationFeed from './SourceConversationFeed.vue'
 import SourceConversationHeader from './SourceConversationHeader.vue'
+import SourceConversationPane from './SourceConversationPane.vue'
 import SourceTrajectory from './SourceTrajectory.vue'
+
+type ConversationTab = 'conversation' | 'trajectory'
+
+/** Stable empty slice, so a session with no entries keeps a constant prop identity. */
+const NO_ENTRIES: readonly ConversationFeedEntry[] = []
 
 const props = defineProps<{
   sessionId: string | null
   sessionTitle: string
+  retainedSessionIds: readonly string[]
+  entriesBySession: Record<string, readonly ConversationFeedEntry[]>
+  /**
+   * Shell-owned memory of where each session was left, in pixels. Panes are
+   * bounded, so this is what survives an eviction; the surface only forwards it.
+   */
+  sessionScrollMemory: Map<string, SessionScrollMemory>
   workspacePath: string | null
   workspaceError: string
-  entries: readonly ConversationFeedEntry[]
   rightPanelOpen: boolean
 }>()
 
@@ -26,67 +38,17 @@ const emit = defineEmits<{
 }>()
 
 const conversationRoot = ref<HTMLElement | null>(null)
-const conversationScroll = ref<HTMLElement | null>(null)
+const activeTab = ref<ConversationTab>('conversation')
 const { copy } = useAppSettings()
 
 useChipSelectionHighlight(conversationRoot)
 
-type ConversationTab = 'conversation' | 'trajectory'
-
-const activeTab = ref<ConversationTab>('conversation')
-const conversationScrollTop = ref(0)
 let rootResizeObserver: ResizeObserver | null = null
-let scrollRestoreToken = 0
 
-function invalidateScheduledScrollRestore(): void {
-  scrollRestoreToken += 1
-}
-
-function scheduleScrollRestore(top: number): void {
-  const token = ++scrollRestoreToken
-  void nextTick(() => {
-    if (token !== scrollRestoreToken || activeTab.value !== 'conversation') {
-      return
-    }
-
-    const element = conversationScroll.value
-    if (element === null) {
-      return
-    }
-    element.scrollTo({ top, behavior: 'auto' })
-  })
-}
-
-/** Copy events bubble; owning them here covers both the feed and the composer. */
+/** Copy events bubble; owning them here covers both the panes and the composer. */
 function handleAttachmentCopy(event: ClipboardEvent): void {
   writeComposerClipboard(event, conversationRoot.value)
 }
-
-function selectTab(nextTab: ConversationTab): void {
-  if (nextTab === activeTab.value) {
-    return
-  }
-
-  if (activeTab.value === 'conversation') {
-    conversationScrollTop.value = conversationScroll.value?.scrollTop ?? 0
-  }
-
-  invalidateScheduledScrollRestore()
-  if (nextTab === 'trajectory') {
-    conversationScroll.value?.scrollTo({ top: 0, behavior: 'auto' })
-  }
-
-  activeTab.value = nextTab
-  if (nextTab === 'conversation') {
-    scheduleScrollRestore(conversationScrollTop.value)
-  }
-}
-
-watch(() => props.sessionId, () => {
-  activeTab.value = 'conversation'
-  conversationScrollTop.value = 0
-  scheduleScrollRestore(0)
-})
 
 onMounted((): void => {
   if (typeof ResizeObserver === 'undefined' || conversationRoot.value === null) {
@@ -104,9 +66,16 @@ onMounted((): void => {
 })
 
 onUnmounted((): void => {
-  invalidateScheduledScrollRestore()
   rootResizeObserver?.disconnect()
   rootResizeObserver = null
+})
+
+/**
+ * The tab belongs to the surface, not to a pane: a session change returns to the
+ * conversation view, while every pane keeps its own scroll position either way.
+ */
+watch(() => props.sessionId, () => {
+  activeTab.value = 'conversation'
 })
 </script>
 
@@ -121,56 +90,63 @@ onUnmounted((): void => {
     <SourceConversationHeader
       v-if="props.sessionId !== null"
       :title="props.sessionTitle"
-      :active-tab="activeTab"
+      v-model:active-tab="activeTab"
       :workspace-path="props.workspacePath"
       :right-panel-open="props.rightPanelOpen"
-      @update:active-tab="selectTab"
       @request-workspace="emit('request-workspace')"
       @toggle-right-panel="emit('toggle-right-panel')"
     />
-    <div class="omp-conversation-body">
+    <div
+      class="omp-conversation-body"
+      :class="{ 'omp-conversation-body-hero': props.sessionId === null }"
+    >
       <div
-        ref="conversationScroll"
-        class="omp-conversation-scroll-body"
-        :class="{
-          'omp-conversation-scroll-body-empty': props.sessionId === null,
-          'omp-conversation-scroll-body-session': props.sessionId !== null,
-        }"
+        v-if="props.retainedSessionIds.length > 0"
+        id="omp-conversation-panel"
+        class="omp-conversation-stage"
+        :class="{ 'omp-conversation-kept-hidden': props.sessionId === null }"
+        role="tabpanel"
+        :aria-hidden="props.sessionId === null ? true : undefined"
+        :inert="props.sessionId === null"
+        :aria-labelledby="activeTab === 'trajectory' ? 'omp-trajectory-tab' : 'omp-conversation-tab'"
       >
         <div
-          v-if="props.sessionId !== null"
-          id="omp-conversation-panel"
-          class="omp-conversation-view"
-          :class="{ 'omp-conversation-view-trajectory': activeTab === 'trajectory' }"
-          role="tabpanel"
-          :aria-labelledby="activeTab === 'trajectory' ? 'omp-trajectory-tab' : 'omp-conversation-tab'"
+          class="omp-conversation-panes"
+          :class="{ 'omp-conversation-kept-hidden': activeTab !== 'conversation' }"
+          :aria-hidden="activeTab !== 'conversation'"
         >
-          <div
-            class="omp-conversation-tab-pane omp-conversation-tab-pane-conversation"
-            :class="{ 'omp-conversation-tab-pane-inactive': activeTab !== 'conversation' }"
-            :aria-hidden="activeTab !== 'conversation'"
-          >
-            <SourceConversationFeed
-              :scroll-element="conversationScroll"
-              :entries="props.entries"
-            />
-          </div>
-          <div
-            class="omp-conversation-tab-pane omp-conversation-tab-pane-trajectory"
-            :class="{ 'omp-conversation-tab-pane-inactive': activeTab !== 'trajectory' }"
-            :aria-hidden="activeTab !== 'trajectory'"
-          >
-            <SourceTrajectory />
-          </div>
+          <!--
+            Rendered in the order panes were first opened and never rearranged:
+            moving a pane's DOM node resets the scroll position it exists to
+            keep. Panes stay mounted through the hero phase too (the stage is
+            hidden, not unmounted), so starting a new session does not cost a
+            retained position. The active session always has a pane here, so
+            visibility never depends on the order.
+          -->
+          <SourceConversationPane
+            v-for="retainedId in props.retainedSessionIds"
+            :key="retainedId"
+            :session-id="retainedId"
+            :visible="retainedId === props.sessionId"
+            :entries="props.entriesBySession[retainedId] ?? NO_ENTRIES"
+            :session-scroll-memory="props.sessionScrollMemory"
+          />
         </div>
-        <SourceConversationComposer
-          :session-id="props.sessionId"
-          :workspace-path="props.workspacePath"
-          :workspace-error="props.workspaceError"
-          @request-workspace="emit('request-workspace')"
-          @submit="emit('submit', $event)"
-        />
+        <div
+          class="omp-conversation-trajectory"
+          :class="{ 'omp-conversation-kept-hidden': activeTab !== 'trajectory' }"
+          :aria-hidden="activeTab !== 'trajectory'"
+        >
+          <SourceTrajectory />
+        </div>
       </div>
+      <SourceConversationComposer
+        :session-id="props.sessionId"
+        :workspace-path="props.workspacePath"
+        :workspace-error="props.workspaceError"
+        @request-workspace="emit('request-workspace')"
+        @submit="emit('submit', $event)"
+      />
     </div>
   </section>
 </template>
